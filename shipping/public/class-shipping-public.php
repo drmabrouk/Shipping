@@ -1571,13 +1571,6 @@ class Shipping_Public {
         wp_send_json_success('تمت إعادة تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول');
     }
 
-    public function ajax_get_template_ajax() {
-        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
-        $type = sanitize_text_field($_POST['type']);
-        $template = Shipping_Notifications::get_template($type);
-        if ($template) wp_send_json_success($template);
-        else wp_send_json_error('Template not found');
-    }
 
     public function ajax_save_template_ajax() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
@@ -2070,6 +2063,57 @@ class Shipping_Public {
         $res = Shipping_DB::add_customs_entry($_POST);
         if ($res) wp_send_json_success($res);
         else wp_send_json_error('Failed to add customs entry');
+    }
+
+    public function ajax_get_customs_docs() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_customs_docs(intval($_GET['shipment_id'] ?? 0)));
+    }
+
+    public function ajax_add_customs_doc() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_customs_action', 'nonce');
+        $res = Shipping_DB::add_customs_doc($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add customs document');
+    }
+
+    public function ajax_get_template_ajax() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $type = sanitize_text_field($_POST['type']);
+        $template = Shipping_Notifications::get_template($type);
+        if ($template) wp_send_json_success($template);
+        else wp_send_json_error('Template not found');
+    }
+
+    public function ajax_get_contracts() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_contracts(intval($_GET['customer_id'] ?? 0)));
+    }
+
+    public function ajax_add_contract() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_contract_action', 'nonce');
+        $res = Shipping_DB::add_contract($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add contract');
+    }
+
+    public function ajax_get_customs_status() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_customs_entries());
+    }
+
+    public function ajax_get_all_shipments() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        global $wpdb;
+        $shipments = $wpdb->get_results("SELECT id, shipment_number FROM {$wpdb->prefix}shipping_shipments WHERE is_archived = 0 ORDER BY id DESC LIMIT 100");
+        wp_send_json_success($shipments);
+    }
+
+    public function ajax_get_shipment_logs() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_shipment_logs(intval($_GET['id'])));
     }
 
     public function ajax_add_pricing() {

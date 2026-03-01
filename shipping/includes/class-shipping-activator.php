@@ -373,6 +373,37 @@ class Shipping_Activator {
             KEY vehicle_id (vehicle_id)
         ) $charset_collate;\n";
 
+        // Contracts Table
+        $table_name = $wpdb->prefix . 'shipping_contracts';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            customer_id mediumint(9) NOT NULL,
+            contract_number varchar(100) NOT NULL,
+            title varchar(255),
+            start_date date,
+            end_date date,
+            status varchar(50) DEFAULT 'active',
+            file_url text,
+            notes text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY contract_number (contract_number),
+            KEY customer_id (customer_id)
+        ) $charset_collate;\n";
+
+        // Customs Documents Table
+        $table_name = $wpdb->prefix . 'shipping_customs_docs';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            shipment_id mediumint(9) NOT NULL,
+            doc_type varchar(100) NOT NULL,
+            file_url text NOT NULL,
+            status varchar(50) DEFAULT 'pending',
+            uploaded_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            KEY shipment_id (shipment_id)
+        ) $charset_collate;\n";
+
         // Customs Table
         $table_name = $wpdb->prefix . 'shipping_customs';
         $sql .= "CREATE TABLE $table_name (
@@ -610,6 +641,15 @@ class Shipping_Activator {
         // 15. Tracking Events (2)
         $wpdb->insert("{$wpdb->prefix}shipping_shipment_tracking_events", ['shipment_id' => $s1_id, 'status' => 'picked-up', 'location' => 'مستودع الرياض', 'description' => 'تم استلام الشحنة من المرسل']);
         $wpdb->insert("{$wpdb->prefix}shipping_shipment_tracking_events", ['shipment_id' => $s1_id, 'status' => 'in-transit', 'location' => 'طريق الرياض الدمام', 'description' => 'الشحنة في الطريق للوجهة']);
+
+        // 16. Contracts (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_contracts", ['customer_id' => 1, 'contract_number' => 'CON-Y2024-01', 'title' => 'اتفاقية شحن سنوية - مخفضة', 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d', strtotime('+1 year')), 'status' => 'active']);
+        $wpdb->insert("{$wpdb->prefix}shipping_contracts", ['customer_id' => 2, 'contract_number' => 'CON-Y2024-02', 'title' => 'عقد توريد خدمات VIP', 'start_date' => date('Y-01-01'), 'end_date' => date('Y-12-31'), 'status' => 'active']);
+
+        // 17. Customs Entries & Docs (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_customs", ['shipment_id' => $s1_id, 'documentation_status' => 'complete', 'duties_amount' => 1250.00, 'clearance_status' => 'released']);
+        $wpdb->insert("{$wpdb->prefix}shipping_customs_docs", ['shipment_id' => $s1_id, 'doc_type' => 'Commercial Invoice', 'file_url' => 'https://example.com/invoice1.pdf', 'status' => 'approved']);
+        $wpdb->insert("{$wpdb->prefix}shipping_customs_docs", ['shipment_id' => $s1_id, 'doc_type' => 'Packing List', 'file_url' => 'https://example.com/pack1.pdf', 'status' => 'approved']);
     }
 
     private static function seed_notification_templates() {

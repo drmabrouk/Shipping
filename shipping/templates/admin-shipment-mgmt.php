@@ -131,6 +131,21 @@ $sub = $_GET['sub'] ?? 'create-shipment';
     </div>
 </div>
 
+<!-- Shipment Logs Modal -->
+<div id="modal-shipment-logs" class="shipping-modal">
+    <div class="shipping-modal-content" style="max-width: 600px;">
+        <div class="shipping-modal-header">
+            <h4>سجل تتبع الشحنة: <span id="log-shipment-num"></span></h4>
+            <button onclick="document.getElementById('modal-shipment-logs').style.display='none'">&times;</button>
+        </div>
+        <div class="shipping-modal-body">
+            <div id="shipment-logs-timeline" class="shipping-timeline" style="padding: 20px;">
+                <!-- Logs loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Monitoring & Audit Trail -->
 <div id="shipment-monitoring" class="shipping-internal-tab" style="display: <?php echo $sub == 'monitoring' ? 'block' : 'none'; ?>;">
     <?php
@@ -156,7 +171,10 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                             <td><?php echo date('Y-m-d H:i', strtotime($s->updated_at)); ?></td>
                             <td><span class="shipping-badge"><?php echo $s->status; ?></span></td>
                             <td>
-                                <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">تتبع</button>
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">تتبع</button>
+                                    <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="viewShipmentLogs(<?php echo $s->id; ?>, '<?php echo $s->shipment_number; ?>')">السجل</button>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; endif; ?>
@@ -273,6 +291,29 @@ function calculateRealtimeCost() {
             }
         });
     }, 500);
+}
+
+function viewShipmentLogs(id, num) {
+    document.getElementById('log-shipment-num').innerText = num;
+    const container = document.getElementById('shipment-logs-timeline');
+    container.innerHTML = '<p style="text-align:center;">جاري تحميل السجل...</p>';
+    document.getElementById('modal-shipment-logs').style.display = 'flex';
+
+    fetch(ajaxurl + '?action=shipping_get_shipment_logs&id=' + id)
+    .then(r => r.json()).then(res => {
+        if (!res.data.length) { container.innerHTML = '<p>لا توجد سجلات لهذه الشحنة</p>'; return; }
+        container.innerHTML = res.data.map(l => `
+            <div class="timeline-item" style="border-right: 2px solid #edf2f7; padding-right: 20px; position: relative; padding-bottom: 15px; margin-right: 10px; text-align: right;">
+                <div style="position: absolute; right: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--shipping-primary-color); border: 2px solid #fff;"></div>
+                <div style="font-weight: 700; font-size: 13px;">${l.action}</div>
+                <div style="font-size: 11px; color: #718096;">بواسطة: ${l.display_name} | ${l.created_at}</div>
+                <div style="font-size: 12px; margin-top: 5px; background: #f8fafc; padding: 5px; border-radius: 5px;">
+                    <span style="color:#718096">من:</span> ${l.old_value || '---'} <br>
+                    <span style="color:#718096">إلى:</span> ${l.new_value}
+                </div>
+            </div>
+        `).join('');
+    });
 }
 
 document.getElementById('shipping-create-shipment-form')?.addEventListener('submit', function(e) {

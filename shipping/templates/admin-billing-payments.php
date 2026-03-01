@@ -9,6 +9,35 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
     <button class="shipping-tab-btn <?php echo $sub == 'reports' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('billing-reports', this)">التقارير المالية</button>
 </div>
 
+<!-- 2. Payment Records -->
+<div id="billing-records" class="shipping-internal-tab" style="display: <?php echo $sub == 'records' ? 'block' : 'none'; ?>;">
+    <?php
+    $payments = $wpdb->get_results("SELECT p.*, i.invoice_number, c.name as customer_name FROM {$wpdb->prefix}shipping_payments p JOIN {$wpdb->prefix}shipping_invoices i ON p.invoice_id = i.id JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id ORDER BY p.payment_date DESC");
+    ?>
+    <div class="shipping-card">
+        <h4>💳 سجل المدفوعات والتحويلات</h4>
+        <div class="shipping-table-container">
+            <table class="shipping-table">
+                <thead><tr><th>المعرف</th><th>رقم الفاتورة</th><th>العميل</th><th>المبلغ</th><th>الوسيلة</th><th>التاريخ</th></tr></thead>
+                <tbody>
+                    <?php if(empty($payments)): ?>
+                        <tr><td colspan="6" style="text-align:center; padding:20px;">لا توجد سجلات دفع حالياً.</td></tr>
+                    <?php else: foreach($payments as $p): ?>
+                        <tr>
+                            <td>#<?php echo $p->transaction_id; ?></td>
+                            <td><strong><?php echo $p->invoice_number; ?></strong></td>
+                            <td><?php echo esc_html($p->customer_name); ?></td>
+                            <td style="color:#2f855a; font-weight:700;">+ <?php echo number_format($p->amount_paid, 2); ?> SAR</td>
+                            <td><?php echo $p->payment_method; ?></td>
+                            <td><?php echo $p->payment_date; ?></td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- 1. Automated Invoice Generation -->
 <div id="billing-invoice" class="shipping-internal-tab" style="display: <?php echo $sub == 'invoice-gen' ? 'block' : 'none'; ?>;">
     <div class="shipping-grid" style="grid-template-columns: 2fr 1fr;">
