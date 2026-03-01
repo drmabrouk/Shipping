@@ -1912,8 +1912,13 @@ class Shipping_Public {
         );
 
         $id = Shipping_DB::add_shipment($data);
-        if ($id) wp_send_json_success($id);
-        else wp_send_json_error('Failed to create shipment');
+        if ($id) {
+            // Link to order if provided
+            if (!empty($_POST['order_id'])) {
+                Shipping_DB::update_order(intval($_POST['order_id']), ['shipment_id' => $id, 'status' => 'in-progress']);
+            }
+            wp_send_json_success($id);
+        } else wp_send_json_error('Failed to create shipment');
     }
 
     public function ajax_update_shipment() {
@@ -2006,6 +2011,49 @@ class Shipping_Public {
         $res = Shipping_DB::add_order($_POST);
         if ($res) wp_send_json_success($res);
         else wp_send_json_error('Failed to add order');
+    }
+
+    public function ajax_get_orders() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $args = [
+            'id' => intval($_GET['id'] ?? 0),
+            'status' => sanitize_text_field($_GET['status'] ?? ''),
+            'customer_id' => intval($_GET['customer_id'] ?? 0),
+            'search' => sanitize_text_field($_GET['search'] ?? '')
+        ];
+        wp_send_json_success(Shipping_DB::get_orders($args));
+    }
+
+    public function ajax_update_order() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_order_action', 'nonce');
+        $id = intval($_POST['id']);
+        if (Shipping_DB::update_order($id, $_POST)) wp_send_json_success('Updated');
+        else wp_send_json_error('Failed to update order');
+    }
+
+    public function ajax_delete_order() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_order_action', 'nonce');
+        if (Shipping_DB::delete_order(intval($_POST['id']))) wp_send_json_success('Deleted');
+        else wp_send_json_error('Failed to delete order');
+    }
+
+    public function ajax_get_order_logs() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_order_logs(intval($_GET['id'])));
+    }
+
+    public function ajax_bulk_update_orders() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_order_action', 'nonce');
+        $ids = explode(',', $_POST['ids']);
+        $status = sanitize_text_field($_POST['status']);
+        $count = 0;
+        foreach ($ids as $id) {
+            if (Shipping_DB::update_order(intval($id), ['status' => $status])) $count++;
+        }
+        wp_send_json_success($count);
     }
 
     public function ajax_add_route() {

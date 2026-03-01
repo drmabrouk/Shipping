@@ -83,6 +83,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                     </select>
                 </div>
 
+                <input type="hidden" name="order_id" id="shipment-order-id-input" value="">
                 <input type="hidden" name="estimated_cost" id="shipment-estimated-cost-input" value="0">
                 <button type="submit" class="shipping-btn" style="grid-column: span 2; height: 50px; font-weight: 800; margin-top: 10px;">تأكيد وإنشاء الشحنة</button>
             </form>
@@ -342,6 +343,29 @@ function processBulkShipments() {
         else alert(res.data);
     });
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id');
+    if (orderId) {
+        fetch(ajaxurl + '?action=shipping_get_orders&id=' + orderId)
+        .then(r => r.json()).then(res => {
+            if (res.success && res.data.length) {
+                const o = res.data[0];
+                const f = document.getElementById('shipping-create-shipment-form');
+                if (f) {
+                    document.getElementById('shipment-order-id-input').value = orderId;
+                    f.customer_id.value = o.customer_id;
+                    f.origin.value = o.pickup_address;
+                    f.destination.value = o.delivery_address;
+
+                    // Trigger cost calculation if weight is set
+                    if (f.weight.value > 0) calculateRealtimeCost();
+                }
+            }
+        });
+    }
+});
 </script>
 
 <style>
