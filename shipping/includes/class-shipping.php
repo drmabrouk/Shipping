@@ -88,6 +88,8 @@ class Shipping {
         $this->loader->add_action('wp_ajax_shipping_update_vehicle', $plugin_public, 'ajax_update_vehicle');
         $this->loader->add_action('wp_ajax_shipping_delete_vehicle', $plugin_public, 'ajax_delete_vehicle');
         $this->loader->add_action('wp_ajax_shipping_get_maintenance_logs', $plugin_public, 'ajax_get_maintenance_logs');
+        $this->loader->add_action('wp_ajax_shipping_get_vehicle_shipments', $plugin_public, 'ajax_get_vehicle_shipments');
+        $this->loader->add_action('wp_ajax_shipping_get_shipment_full_details', $plugin_public, 'ajax_get_shipment_full_details');
         $this->loader->add_action('wp_ajax_shipping_add_maintenance_log', $plugin_public, 'ajax_add_maintenance_log');
         $this->loader->add_action('wp_ajax_shipping_update_maintenance_log', $plugin_public, 'ajax_update_maintenance_log');
         $this->loader->add_action('wp_ajax_shipping_delete_maintenance_log', $plugin_public, 'ajax_delete_maintenance_log');

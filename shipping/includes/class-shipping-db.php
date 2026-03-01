@@ -345,7 +345,7 @@ class Shipping_DB {
             $params[] = $s; $params[] = $s;
         }
 
-        $query = "SELECT o.*, c.name as customer_name, c.email as customer_email, c.phone as customer_phone
+        $query = "SELECT o.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name, c.email as customer_email, c.phone as customer_phone
                   FROM {$wpdb->prefix}shipping_orders o
                   LEFT JOIN {$wpdb->prefix}shipping_customers c ON o.customer_id = c.id
                   WHERE $where ORDER BY o.created_at DESC";
@@ -599,8 +599,21 @@ class Shipping_DB {
                     );
                 }
 
-                // Trigger Automated Alert
+                // Fetch full shipment for sync and alerts
                 $shipment = self::get_shipment_with_tracking($id);
+
+                // Sync status to Fleet (Vehicle)
+                if ($shipment && $shipment->carrier_id) {
+                    $fleet_status = 'available';
+                    if (in_array($data['status'], ['in-transit', 'out-for-delivery'])) {
+                        $fleet_status = 'in-transit';
+                    } elseif ($data['status'] === 'delayed') {
+                        $fleet_status = 'delayed';
+                    }
+                    $wpdb->update($wpdb->prefix . 'shipping_fleet', ['status' => $fleet_status], ['id' => $shipment->carrier_id]);
+                }
+
+                // Trigger Automated Alert
                 if ($shipment && $shipment->customer_id) {
                     $customer = $wpdb->get_row($wpdb->prepare("SELECT email, name FROM {$wpdb->prefix}shipping_customers WHERE id = %d", $shipment->customer_id));
 
@@ -611,6 +624,22 @@ class Shipping_DB {
                         self::save_alert([
                             'title' => 'تأخير في شحنة',
                             'message' => "الشحنة رقم {$shipment->shipment_number} تواجه تأخيراً حالياً.",
+                            'severity' => 'warning',
+                            'status' => 'active'
+                        ]);
+                    } elseif ($data['status'] === 'operational-issue') {
+                        // Operational Issue Alert
+                        self::save_alert([
+                            'title' => 'مشكلة تشغيلية عاجلة',
+                            'message' => "تم تسجيل مشكلة تشغيلية في الشحنة رقم {$shipment->shipment_number}. يرجى المتابعة فوراً.",
+                            'severity' => 'critical',
+                            'status' => 'active'
+                        ]);
+                    } elseif ($data['status'] === 'route-deviation') {
+                        // Route Deviation Alert
+                        self::save_alert([
+                            'title' => 'انحراف عن المسار',
+                            'message' => "تنبيه: الشحنة رقم {$shipment->shipment_number} خرجت عن المسار المحدد لها.",
                             'severity' => 'warning',
                             'status' => 'active'
                         ]);
@@ -725,7 +754,7 @@ class Shipping_DB {
 
     public static function get_receivables() {
         global $wpdb;
-        return $wpdb->get_results("SELECT i.*, c.name as customer_name FROM {$wpdb->prefix}shipping_invoices i JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id WHERE i.status != 'paid' ORDER BY i.due_date ASC");
+        return $wpdb->get_results("SELECT i.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_invoices i JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id WHERE i.status != 'paid' ORDER BY i.due_date ASC");
     }
 
     public static function get_revenue_stats() {
@@ -1080,13 +1109,25 @@ class Shipping_DB {
 
     public static function add_inventory_item($data) {
         global $wpdb;
-        return $wpdb->insert($wpdb->prefix . 'shipping_inventory', array(
-            'warehouse_id' => intval($data['warehouse_id']),
-            'item_name' => sanitize_text_field($data['item_name']),
-            'sku' => sanitize_text_field($data['sku']),
-            'quantity' => intval($data['quantity']),
-            'unit' => sanitize_text_field($data['unit'])
+        $qty = intval($data['quantity']);
+        $warehouse_id = intval($data['warehouse_id']);
+
+        $res = $wpdb->insert($wpdb->prefix . 'shipping_inventory', array(
+            'warehouse_id' => $warehouse_id,
+            'item_name' => sanitize_text_field($data['item_name'] ?? ''),
+            'sku' => sanitize_text_field($data['sku'] ?? ''),
+            'quantity' => $qty,
+            'unit' => sanitize_text_field($data['unit'] ?? '')
         ));
+
+        if ($res) {
+            // Deduct from warehouse capacity
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$wpdb->prefix}shipping_warehouses SET available_capacity = available_capacity - %f WHERE id = %d",
+                $qty, $warehouse_id
+            ));
+        }
+        return $res;
     }
 
     public static function update_inventory_item($id, $data) {
@@ -1096,6 +1137,14 @@ class Shipping_DB {
 
     public static function delete_inventory_item($id) {
         global $wpdb;
+        $item = $wpdb->get_row($wpdb->prepare("SELECT warehouse_id, quantity FROM {$wpdb->prefix}shipping_inventory WHERE id = %d", $id));
+        if ($item) {
+            // Restore warehouse capacity
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$wpdb->prefix}shipping_warehouses SET available_capacity = available_capacity + %f WHERE id = %d",
+                $item->quantity, $item->warehouse_id
+            ));
+        }
         return $wpdb->delete($wpdb->prefix . 'shipping_inventory', array('id' => $id));
     }
 
@@ -1206,7 +1255,7 @@ class Shipping_DB {
     public static function get_contracts($customer_id = 0) {
         global $wpdb;
         $where = $customer_id ? $wpdb->prepare("WHERE c.customer_id = %d", $customer_id) : "";
-        return $wpdb->get_results("SELECT c.*, cu.name as customer_name FROM {$wpdb->prefix}shipping_contracts c JOIN {$wpdb->prefix}shipping_customers cu ON c.customer_id = cu.id $where ORDER BY c.id DESC");
+        return $wpdb->get_results("SELECT c.*, CONCAT(cu.first_name, ' ', cu.last_name) as customer_name FROM {$wpdb->prefix}shipping_contracts c JOIN {$wpdb->prefix}shipping_customers cu ON c.customer_id = cu.id $where ORDER BY c.id DESC");
     }
 
     public static function add_contract($data) {

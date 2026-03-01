@@ -72,6 +72,7 @@ $sub = $_GET['sub'] ?? 'live-tracking';
                     <option value="out-for-delivery">خارج للتوصيل</option>
                     <option value="arrived-at-hub">وصل للمركز</option>
                     <option value="delayed">متأخر</option>
+                        <option value="operational-issue">مشكلة تشغيلية</option>
                 </select>
             </div>
             <button type="submit" class="shipping-btn" style="width: 100%;">تحديث الموقع</button>
@@ -383,13 +384,19 @@ $sub = $_GET['sub'] ?? 'live-tracking';
         <!-- Vehicles will be loaded here via AJAX -->
     </div>
 
-    <div id="maintenance-section" style="display: none; margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h4 style="margin: 0;">سجل الصيانة للمركبة: <span id="selected-vehicle-number"></span></h4>
-            <button class="shipping-btn" onclick="shippingOpenMaintenanceModal()">+ إضافة سجل صيانة</button>
+    <div id="vehicle-details-section" style="display: none; margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
+        <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; border-bottom: 1px solid #eee; margin-bottom: 20px;">
+            <button class="shipping-tab-btn shipping-active" onclick="shippingOpenVehicleSubTab('maintenance', this)">🛠️ سجل الصيانة</button>
+            <button class="shipping-tab-btn" onclick="shippingOpenVehicleSubTab('shipments', this)">📦 الشحنات المرتبطة</button>
         </div>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
+
+        <div id="vehicle-maintenance-tab" class="vehicle-sub-tab">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h4 style="margin: 0;">سجل الصيانة للمركبة: <span id="selected-vehicle-number"></span></h4>
+                <button class="shipping-btn" onclick="shippingOpenMaintenanceModal()">+ إضافة سجل صيانة</button>
+            </div>
+            <div class="shipping-table-container">
+                <table class="shipping-table">
                 <thead>
                     <tr>
                         <th>نوع الصيانة</th>
@@ -399,10 +406,31 @@ $sub = $_GET['sub'] ?? 'live-tracking';
                         <th>إجراءات</th>
                     </tr>
                 </thead>
-                <tbody id="maintenance-list-body">
-                    <!-- Maintenance logs will be loaded here -->
-                </tbody>
-            </table>
+                    <tbody id="maintenance-list-body">
+                        <!-- Maintenance logs will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="vehicle-shipments-tab" class="vehicle-sub-tab" style="display:none;">
+            <h4>📦 الشحنات النشطة لهذه المركبة</h4>
+            <div class="shipping-table-container">
+                <table class="shipping-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الشحنة</th>
+                            <th>العميل</th>
+                            <th>المسار</th>
+                            <th>الحالة</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicle-shipments-body">
+                        <!-- Loaded via AJAX -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -841,7 +869,16 @@ $sub = $_GET['sub'] ?? 'live-tracking';
                 shipments.forEach(s => {
                     if (s.current_lat && s.current_lng) {
                         const marker = L.marker([s.current_lat, s.current_lng]).addTo(trackingMap);
-                        marker.bindPopup(`<strong>${s.shipment_number}</strong><br>الحالة: ${s.status}<br>الموقع: ${s.location || 'N/A'}`);
+                        const popupHtml = `
+                            <div style="direction:rtl; text-align:right; font-family:'Rubik', sans-serif;">
+                                <strong style="color:var(--shipping-primary-color);">${s.shipment_number}</strong><br>
+                                <span style="font-size:12px;">الحالة: ${s.status}</span><br>
+                                <span style="font-size:11px; color:#666;">الموقع: ${s.location || 'N/A'}</span><br>
+                                <hr style="margin:5px 0; border:none; border-top:1px solid #eee;">
+                                <button onclick="viewFullDossierFromMap(${s.id})" style="background:var(--shipping-primary-color); color:#fff; border:none; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:10px; width:100%;">الملف الكامل</button>
+                            </div>
+                        `;
+                        marker.bindPopup(popupHtml);
                         trackingMarkers.push(marker);
                     }
                 });
@@ -852,6 +889,13 @@ $sub = $_GET['sub'] ?? 'live-tracking';
                 }
             }
         });
+    };
+
+    window.viewFullDossierFromMap = function(id) {
+        // Since the dossier JS is in another template, we trigger a global or localized event
+        // or just redirect to shipment-mgmt with a query param if not in same tab context.
+        // But the user expects seamless links. Let's redirect for reliability.
+        window.location.href = `<?php echo admin_url('admin.php?page=shipping-admin&shipping_tab=shipment-mgmt&sub=monitoring&view_dossier='); ?>` + id;
     };
 
     window.shippingOpenUpdateLocationModal = function(shipmentId, currentLat, currentLng, currentLocation) {
@@ -1011,13 +1055,41 @@ $sub = $_GET['sub'] ?? 'live-tracking';
         });
     };
 
+    window.shippingOpenVehicleSubTab = function(tab, btn) {
+        document.querySelectorAll('.vehicle-sub-tab').forEach(t => t.style.display = 'none');
+        document.getElementById('vehicle-' + tab + '-tab').style.display = 'block';
+        btn.parentElement.querySelectorAll('.shipping-tab-btn').forEach(b => b.classList.remove('shipping-active'));
+        btn.classList.add('shipping-active');
+    };
+
     window.shippingSelectVehicle = function(id, number) {
         document.getElementById('maintenance-vehicle-id').value = id;
         document.getElementById('selected-vehicle-number').innerText = number;
-        document.getElementById('maintenance-section').style.display = 'block';
+        document.getElementById('vehicle-details-section').style.display = 'block';
         shippingLoadMaintenance(id);
+        shippingLoadVehicleShipments(id);
         document.querySelectorAll('.vehicle-card').forEach(c => c.style.borderColor = '#eee');
         event.currentTarget.style.borderColor = 'var(--shipping-primary-color)';
+    };
+
+    window.shippingLoadVehicleShipments = function(vehicleId) {
+        fetch(ajaxurl + '?action=shipping_get_vehicle_shipments&vehicle_id=' + vehicleId)
+        .then(r => r.json()).then(res => {
+            const body = document.getElementById('vehicle-shipments-body');
+            if (res.success && res.data.length) {
+                body.innerHTML = res.data.map(s => `
+                    <tr>
+                        <td><strong>${s.shipment_number}</strong></td>
+                        <td>${s.customer_name}</td>
+                        <td>${s.origin} → ${s.destination}</td>
+                        <td><span class="shipping-badge">${s.status}</span></td>
+                        <td><button class="shipping-btn-outline" style="padding:4px 8px; font-size:10px;" onclick="viewFullDossierFromMap(${s.id})">الملف</button></td>
+                    </tr>
+                `).join('');
+            } else {
+                body.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد شحنات مرتبطة حالياً.</td></tr>';
+            }
+        });
     };
 
     window.shippingLoadMaintenance = function(vehicleId) {

@@ -2342,6 +2342,20 @@ class Shipping_Public {
         wp_send_json_success(Shipping_DB::get_logistics_analytics());
     }
 
+    public function ajax_get_vehicle_shipments() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $vehicle_id = intval($_GET['vehicle_id']);
+        global $wpdb;
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name
+             FROM {$wpdb->prefix}shipping_shipments s
+             JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id
+             WHERE s.carrier_id = %d AND s.is_archived = 0",
+            $vehicle_id
+        ));
+        wp_send_json_success($results);
+    }
+
     public function ajax_update_shipment_location() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         check_ajax_referer('shipping_shipment_action', 'nonce');
@@ -2357,6 +2371,35 @@ class Shipping_Public {
         } else {
             wp_send_json_error('Failed to update location');
         }
+    }
+
+    public function ajax_get_shipment_full_details() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $id = intval($_GET['id']);
+        global $wpdb;
+
+        $shipment = $wpdb->get_row($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name, f.vehicle_number, r.route_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id LEFT JOIN {$wpdb->prefix}shipping_fleet f ON s.carrier_id = f.id LEFT JOIN {$wpdb->prefix}shipping_logistics r ON s.route_id = r.id WHERE s.id = %d", $id));
+        if (!$shipment) wp_send_json_error('Shipment not found');
+
+        $order = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_orders WHERE shipment_id = %d", $id));
+        $customs = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_customs WHERE shipment_id = %d", $id));
+        $docs = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_customs_docs WHERE shipment_id = %d", $id));
+
+        $invoice = null;
+        if ($order) {
+            $invoice = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_invoices WHERE order_id = %d", $order->id));
+        }
+
+        $events = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_shipment_tracking_events WHERE shipment_id = %d ORDER BY created_at DESC", $id));
+
+        wp_send_json_success([
+            'shipment' => $shipment,
+            'order' => $order,
+            'customs' => $customs,
+            'docs' => $docs,
+            'invoice' => $invoice,
+            'events' => $events
+        ]);
     }
 
     public function inject_global_alerts() {
