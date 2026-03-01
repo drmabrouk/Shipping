@@ -5,7 +5,7 @@ $is_officer = current_user_can('manage_options');
 ?>
 
 <?php if ($is_officer): ?>
-<div class="shipping-card-grid" style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+<div class="shipping-grid" style="display: grid; grid-template-columns: 1.5fr 3fr; gap: 25px; margin-bottom: 30px;">
     <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
         <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">إجمالي العملاء</div>
         <div style="font-size: 2.5em; font-weight: 900; color: var(--shipping-primary-color);"><?php echo esc_html($stats['total_customers'] ?? 0); ?></div>
@@ -141,7 +141,40 @@ function shippingDownloadChart(chartId, fileName) {
             }
         };
 
+        // 1. Shipment Status Distribution
+        createOrUpdateChart('shipmentStatusChart', {
+            type: 'doughnut',
+            data: {
+                labels: ['نشطة', 'مسلمة', 'متأخرة', 'معلقة'],
+                datasets: [{
+                    data: [<?php echo $stats['active_shipments']; ?>, <?php echo $stats['delivered_shipments']; ?>, <?php echo $stats['delayed_shipments']; ?>, <?php echo $stats['new_orders']; ?>],
+                    backgroundColor: ['#4299E1', '#48BB78', '#F56565', '#ECC94B']
+                }]
+            },
+            options: chartOptions
+        });
 
+        // 2. Revenue Trend (Last 7 Days)
+        fetch(ajaxurl + '?action=shipping_get_billing_report')
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                createOrUpdateChart('revenueTrendChart', {
+                    type: 'line',
+                    data: {
+                        labels: res.data.daily.map(d => d.date),
+                        datasets: [{
+                            label: 'الإيرادات اليومية',
+                            data: res.data.daily.map(d => d.total),
+                            borderColor: '#F63049',
+                            backgroundColor: 'rgba(246, 48, 73, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: chartOptions
+                });
+            }
+        });
     };
 
     if (document.readyState === 'complete') initSummaryCharts();

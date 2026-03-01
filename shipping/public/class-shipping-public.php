@@ -1571,13 +1571,6 @@ class Shipping_Public {
         wp_send_json_success('تمت إعادة تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول');
     }
 
-    public function ajax_get_template_ajax() {
-        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
-        $type = sanitize_text_field($_POST['type']);
-        $template = Shipping_Notifications::get_template($type);
-        if ($template) wp_send_json_success($template);
-        else wp_send_json_error('Template not found');
-    }
 
     public function ajax_save_template_ajax() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
@@ -2072,6 +2065,57 @@ class Shipping_Public {
         else wp_send_json_error('Failed to add customs entry');
     }
 
+    public function ajax_get_customs_docs() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_customs_docs(intval($_GET['shipment_id'] ?? 0)));
+    }
+
+    public function ajax_add_customs_doc() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_customs_action', 'nonce');
+        $res = Shipping_DB::add_customs_doc($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add customs document');
+    }
+
+    public function ajax_get_template_ajax() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $type = sanitize_text_field($_POST['type']);
+        $template = Shipping_Notifications::get_template($type);
+        if ($template) wp_send_json_success($template);
+        else wp_send_json_error('Template not found');
+    }
+
+    public function ajax_get_contracts() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_contracts(intval($_GET['customer_id'] ?? 0)));
+    }
+
+    public function ajax_add_contract() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_contract_action', 'nonce');
+        $res = Shipping_DB::add_contract($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add contract');
+    }
+
+    public function ajax_get_customs_status() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_customs_entries());
+    }
+
+    public function ajax_get_all_shipments() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        global $wpdb;
+        $shipments = $wpdb->get_results("SELECT id, shipment_number FROM {$wpdb->prefix}shipping_shipments WHERE is_archived = 0 ORDER BY id DESC LIMIT 100");
+        wp_send_json_success($shipments);
+    }
+
+    public function ajax_get_shipment_logs() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_shipment_logs(intval($_GET['id'])));
+    }
+
     public function ajax_add_pricing() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         check_ajax_referer('shipping_pricing_action', 'nonce');
@@ -2298,6 +2342,20 @@ class Shipping_Public {
         wp_send_json_success(Shipping_DB::get_logistics_analytics());
     }
 
+    public function ajax_get_vehicle_shipments() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $vehicle_id = intval($_GET['vehicle_id']);
+        global $wpdb;
+        $results = $wpdb->get_results($wpdb->prepare(
+            "SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name
+             FROM {$wpdb->prefix}shipping_shipments s
+             JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id
+             WHERE s.carrier_id = %d AND s.is_archived = 0",
+            $vehicle_id
+        ));
+        wp_send_json_success($results);
+    }
+
     public function ajax_update_shipment_location() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         check_ajax_referer('shipping_shipment_action', 'nonce');
@@ -2313,6 +2371,35 @@ class Shipping_Public {
         } else {
             wp_send_json_error('Failed to update location');
         }
+    }
+
+    public function ajax_get_shipment_full_details() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $id = intval($_GET['id']);
+        global $wpdb;
+
+        $shipment = $wpdb->get_row($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name, f.vehicle_number, r.route_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id LEFT JOIN {$wpdb->prefix}shipping_fleet f ON s.carrier_id = f.id LEFT JOIN {$wpdb->prefix}shipping_logistics r ON s.route_id = r.id WHERE s.id = %d", $id));
+        if (!$shipment) wp_send_json_error('Shipment not found');
+
+        $order = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_orders WHERE shipment_id = %d", $id));
+        $customs = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_customs WHERE shipment_id = %d", $id));
+        $docs = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_customs_docs WHERE shipment_id = %d", $id));
+
+        $invoice = null;
+        if ($order) {
+            $invoice = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_invoices WHERE order_id = %d", $order->id));
+        }
+
+        $events = $wpdb->get_results($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_shipment_tracking_events WHERE shipment_id = %d ORDER BY created_at DESC", $id));
+
+        wp_send_json_success([
+            'shipment' => $shipment,
+            'order' => $order,
+            'customs' => $customs,
+            'docs' => $docs,
+            'invoice' => $invoice,
+            'events' => $events
+        ]);
     }
 
     public function inject_global_alerts() {

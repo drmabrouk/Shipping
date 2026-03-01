@@ -200,6 +200,7 @@ function loadOrders(status = currentStatus) {
                     <div style="display:flex; gap:5px;">
                         <button class="shipping-btn-icon" title="سجل الطلب" onclick="viewOrderLogs(${o.id}, '${o.order_number}')">📜</button>
                         <button class="shipping-btn-icon" title="تعديل الطلب" onclick='openEditOrderModal(${JSON.stringify(o).replace(/"/g, '&quot;')})'>✏️</button>
+                        ${o.shipment_id ? `<button class="shipping-btn-icon" title="ملف الشحنة" style="background:#319795; color:#fff;" onclick="viewShipmentDossier(${o.shipment_id})">📂</button>` : ''}
                         ${o.status === 'new' ? `<button class="shipping-btn-icon" title="تجهيز الشحن" style="background:#3182ce; color:#fff;" onclick="prepareShipment(${o.id})">📦</button>` : ''}
                         ${o.status !== 'completed' && o.status !== 'cancelled' ? `
                             <button class="shipping-btn-icon" title="تحديث الحالة" style="background:#38a169; color:#fff;" onclick="updateOrderStatus(${o.id}, '${getNextStatus(o.status)}')">⏭️</button>
@@ -272,6 +273,10 @@ function viewOrderLogs(id, num) {
 function prepareShipment(orderId) {
     // Logic to redirect to shipment creation with order data
     window.location.href = `<?php echo admin_url('admin.php?page=shipping-admin&shipping_tab=shipment-mgmt&sub=create-shipment&order_id='); ?>` + orderId;
+}
+
+function viewShipmentDossier(shipmentId) {
+    window.location.href = `<?php echo admin_url('admin.php?page=shipping-admin&shipping_tab=shipment-mgmt&sub=monitoring&view_dossier='); ?>` + shipmentId;
 }
 
 // Bulk Actions Logic

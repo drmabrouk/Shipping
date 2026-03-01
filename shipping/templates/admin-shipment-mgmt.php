@@ -131,6 +131,21 @@ $sub = $_GET['sub'] ?? 'create-shipment';
     </div>
 </div>
 
+<!-- Shipment Logs Modal -->
+<div id="modal-shipment-logs" class="shipping-modal">
+    <div class="shipping-modal-content" style="max-width: 600px;">
+        <div class="shipping-modal-header">
+            <h4>سجل تتبع الشحنة: <span id="log-shipment-num"></span></h4>
+            <button onclick="document.getElementById('modal-shipment-logs').style.display='none'">&times;</button>
+        </div>
+        <div class="shipping-modal-body">
+            <div id="shipment-logs-timeline" class="shipping-timeline" style="padding: 20px;">
+                <!-- Logs loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Monitoring & Audit Trail -->
 <div id="shipment-monitoring" class="shipping-internal-tab" style="display: <?php echo $sub == 'monitoring' ? 'block' : 'none'; ?>;">
     <?php
@@ -156,7 +171,11 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                             <td><?php echo date('Y-m-d H:i', strtotime($s->updated_at)); ?></td>
                             <td><span class="shipping-badge"><?php echo $s->status; ?></span></td>
                             <td>
-                                <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">تتبع</button>
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#319795;" onclick="viewFullDossier(<?php echo $s->id; ?>)">الملف الكامل</button>
+                                    <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">تتبع</button>
+                                    <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="viewShipmentLogs(<?php echo $s->id; ?>, '<?php echo $s->shipment_number; ?>')">السجل</button>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; endif; ?>
@@ -170,24 +189,54 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 <div id="shipment-schedule" class="shipping-internal-tab" style="display: <?php echo $sub == 'schedule' ? 'block' : 'none'; ?>;">
     <?php
     $today = date('Y-m-d');
-    $pickup_today = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}shipping_shipments WHERE DATE(pickup_date) = %s", $today));
-    $dispatch_today = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}shipping_shipments WHERE DATE(dispatch_date) = %s", $today));
-    $delivery_today = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}shipping_shipments WHERE DATE(delivery_date) = %s", $today));
+    $pickups = $wpdb->get_results($wpdb->prepare("SELECT s.*, c.name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(pickup_date) = %s", $today));
+    $dispatches = $wpdb->get_results($wpdb->prepare("SELECT s.*, c.name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(dispatch_date) = %s", $today));
+    $deliveries = $wpdb->get_results($wpdb->prepare("SELECT s.*, c.name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(delivery_date) = %s", $today));
     ?>
     <div class="shipping-card">
-        <h4>جدول الشحن والمواعيد اليومي</h4>
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
-            <div style="background:#fffaf0; padding:15px; border-radius:10px; border:1px solid #feebc8;">
-                <h5 style="margin-top:0; color:#dd6b20;">مواعيد الاستلام اليوم</h5>
-                <div style="font-size:24px; font-weight:800;"><?php echo $pickup_today; ?></div>
+        <h4>🗓️ جدول الشحن والمهام لليوم (<?php echo $today; ?>)</h4>
+
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top:20px;">
+            <!-- Pickups -->
+            <div style="background:#fffaf0; border:1px solid #feebc8; border-radius:12px; padding:20px;">
+                <h5 style="margin:0 0 15px 0; color:#dd6b20;">📦 مهام الاستلام (${<?php echo count($pickups); ?>})</h5>
+                <div style="display:grid; gap:10px;">
+                    <?php if(empty($pickups)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
+                    foreach($pickups as $p): ?>
+                        <div style="background:#fff; padding:10px; border-radius:8px; font-size:12px; border:1px solid #fbd38d;">
+                            <strong><?php echo $p->shipment_number; ?></strong><br>
+                            <span style="color:#718096;"><?php echo esc_html($p->name); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
-            <div style="background:#ebf8ff; padding:15px; border-radius:10px; border:1px solid #bee3f8;">
-                <h5 style="margin-top:0; color:#3182ce;">شحنات قيد الانطلاق</h5>
-                <div style="font-size:24px; font-weight:800;"><?php echo $dispatch_today; ?></div>
+
+            <!-- Dispatches -->
+            <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:12px; padding:20px;">
+                <h5 style="margin:0 0 15px 0; color:#3182ce;">🚀 مهام الانطلاق (${<?php echo count($dispatches); ?>})</h5>
+                <div style="display:grid; gap:10px;">
+                    <?php if(empty($dispatches)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
+                    foreach($dispatches as $d): ?>
+                        <div style="background:#fff; padding:10px; border-radius:8px; font-size:12px; border:1px solid #90cdf4;">
+                            <strong><?php echo $d->shipment_number; ?></strong><br>
+                            <span style="color:#718096;"><?php echo esc_html($d->name); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
-            <div style="background:#f0fff4; padding:15px; border-radius:10px; border:1px solid #c6f6d5;">
-                <h5 style="margin-top:0; color:#38a169;">مواعيد التسليم المتوقعة</h5>
-                <div style="font-size:24px; font-weight:800;"><?php echo $delivery_today; ?></div>
+
+            <!-- Deliveries -->
+            <div style="background:#f0fff4; border:1px solid #c6f6d5; border-radius:12px; padding:20px;">
+                <h5 style="margin:0 0 15px 0; color:#38a169;">🏁 مهام التسليم (${<?php echo count($deliveries); ?>})</h5>
+                <div style="display:grid; gap:10px;">
+                    <?php if(empty($deliveries)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
+                    foreach($deliveries as $del): ?>
+                        <div style="background:#fff; padding:10px; border-radius:8px; font-size:12px; border:1px solid #9ae6b4;">
+                            <strong><?php echo $del->shipment_number; ?></strong><br>
+                            <span style="color:#718096;"><?php echo esc_html($del->name); ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -222,6 +271,19 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                     <?php endforeach; endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Full Dossier Modal -->
+<div id="modal-full-dossier" class="shipping-modal">
+    <div class="shipping-modal-content" style="max-width: 900px;">
+        <div class="shipping-modal-header" style="background: var(--shipping-dark-color); color: #fff;">
+            <h4>ملف البيانات الموحد للشحنة: <span id="dossier-num"></span></h4>
+            <button onclick="document.getElementById('modal-full-dossier').style.display='none'" style="color:#fff;">&times;</button>
+        </div>
+        <div class="shipping-modal-body" id="dossier-content" style="padding: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Content injected via JS -->
         </div>
     </div>
 </div>
@@ -275,6 +337,29 @@ function calculateRealtimeCost() {
     }, 500);
 }
 
+function viewShipmentLogs(id, num) {
+    document.getElementById('log-shipment-num').innerText = num;
+    const container = document.getElementById('shipment-logs-timeline');
+    container.innerHTML = '<p style="text-align:center;">جاري تحميل السجل...</p>';
+    document.getElementById('modal-shipment-logs').style.display = 'flex';
+
+    fetch(ajaxurl + '?action=shipping_get_shipment_logs&id=' + id)
+    .then(r => r.json()).then(res => {
+        if (!res.data.length) { container.innerHTML = '<p>لا توجد سجلات لهذه الشحنة</p>'; return; }
+        container.innerHTML = res.data.map(l => `
+            <div class="timeline-item" style="border-right: 2px solid #edf2f7; padding-right: 20px; position: relative; padding-bottom: 15px; margin-right: 10px; text-align: right;">
+                <div style="position: absolute; right: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--shipping-primary-color); border: 2px solid #fff;"></div>
+                <div style="font-weight: 700; font-size: 13px;">${l.action}</div>
+                <div style="font-size: 11px; color: #718096;">بواسطة: ${l.display_name} | ${l.created_at}</div>
+                <div style="font-size: 12px; margin-top: 5px; background: #f8fafc; padding: 5px; border-radius: 5px;">
+                    <span style="color:#718096">من:</span> ${l.old_value || '---'} <br>
+                    <span style="color:#718096">إلى:</span> ${l.new_value}
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
 document.getElementById('shipping-create-shipment-form')?.addEventListener('submit', function(e) {
     e.preventDefault();
     const fd = new FormData(this);
@@ -323,6 +408,85 @@ function trackShipment() {
     });
 }
 
+function viewFullDossier(id) {
+    const modal = document.getElementById('modal-full-dossier');
+    const container = document.getElementById('dossier-content');
+    container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:50px;"><span class="dashicons dashicons-update spin" style="font-size:40px; width:40px; height:40px;"></span><br>جاري تجميع ملف البيانات...</div>';
+    modal.style.display = 'flex';
+
+    fetch(ajaxurl + '?action=shipping_get_shipment_full_details&id=' + id)
+    .then(r => r.json()).then(res => {
+        if (!res.success) { alert(res.data); return; }
+        const d = res.data;
+        document.getElementById('dossier-num').innerText = d.shipment.shipment_number;
+
+        let html = `
+            <div class="shipping-card" style="margin:0;">
+                <h5 style="color:var(--shipping-primary-color); border-bottom:1px solid #eee; padding-bottom:10px;">📦 تفاصيل الشحنة واللوجستيات</h5>
+                <div style="font-size:13px; display:grid; gap:8px; margin-top:10px;">
+                    <div><strong>العميل:</strong> ${d.shipment.customer_name}</div>
+                    <div><strong>المسار:</strong> ${d.shipment.route_name || 'غير محدد'}</div>
+                    <div><strong>المركبة:</strong> ${d.shipment.vehicle_number || 'غير محدد'}</div>
+                    <div><strong>الوزن:</strong> ${d.shipment.weight} كجم</div>
+                    <div><strong>الحالة الحالية:</strong> <span class="shipping-badge">${d.shipment.status}</span></div>
+                    <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #eee;">
+                        <strong>من:</strong> ${d.shipment.origin}<br>
+                        <strong>إلى:</strong> ${d.shipment.destination}
+                    </div>
+                </div>
+            </div>
+
+            <div class="shipping-card" style="margin:0;">
+                <h5 style="color:#3182ce; border-bottom:1px solid #eee; padding-bottom:10px;">🛒 الطلب المرتبط والفواتير</h5>
+                <div style="font-size:13px; display:grid; gap:8px; margin-top:10px;">
+                    ${d.order ? `
+                        <div><strong>رقم الطلب:</strong> ${d.order.order_number}</div>
+                        <div><strong>تاريخ الطلب:</strong> ${d.order.created_at}</div>
+                    ` : '<div style="color:#e53e3e;">لم يتم ربط طلب بهذه الشحنة</div>'}
+
+                    ${d.invoice ? `
+                        <div style="margin-top:10px; padding:10px; background:#f0fff4; border-radius:8px;">
+                            <strong>الفاتورة:</strong> ${d.invoice.invoice_number}<br>
+                            <strong>المبلغ:</strong> ${parseFloat(d.invoice.total_amount).toFixed(2)} SAR<br>
+                            <strong>الحالة:</strong> <span class="shipping-badge">${d.invoice.status}</span>
+                        </div>
+                    ` : '<div style="color:#718096;">لا توجد فاتورة مصدرة حالياً</div>'}
+                </div>
+            </div>
+
+            <div class="shipping-card" style="margin:0; grid-column: 1 / -1;">
+                <h5 style="color:#805ad5; border-bottom:1px solid #eee; padding-bottom:10px;">⚖️ التخليص الجمركي والوثائق</h5>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:10px;">
+                    <div>
+                        <div style="font-size:13px; margin-bottom:10px;"><strong>الحالة الجمركية:</strong> ${d.customs ? d.customs.clearance_status : 'لا توجد بيانات'}</div>
+                        <div style="font-size:13px;"><strong>الرسوم:</strong> ${d.customs ? d.customs.duties_amount : '0.00'} SAR</div>
+                    </div>
+                    <div>
+                        <strong>المستندات المرفوعة:</strong>
+                        <ul style="font-size:12px; margin-top:5px; padding-right:20px;">
+                            ${d.docs.length ? d.docs.map(doc => `<li><a href="${doc.file_url}" target="_blank">${doc.doc_type} (${doc.status})</a></li>`).join('') : 'لا توجد مستندات'}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shipping-card" style="margin:0; grid-column: 1 / -1;">
+                <h5 style="border-bottom:1px solid #eee; padding-bottom:10px;">🕒 سجل التتبع التاريخي</h5>
+                <div style="max-height:200px; overflow-y:auto; font-size:12px; margin-top:10px;">
+                    ${d.events.length ? d.events.map(ev => `
+                        <div style="display:flex; gap:10px; margin-bottom:5px; padding-bottom:5px; border-bottom:1px solid #f8f9fa;">
+                            <span style="color:#718096; white-space:nowrap;">${ev.created_at}</span>
+                            <strong>${ev.status}:</strong>
+                            <span>${ev.location || ''} - ${ev.description || ''}</span>
+                        </div>
+                    `).join('') : 'لا توجد أحداث تتبع'}
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+    });
+}
+
 function processBulkShipments() {
     const rowsRaw = document.getElementById('bulk-rows').value;
     if(!rowsRaw) return alert('يرجى إدخال البيانات');
@@ -364,6 +528,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    const dossierId = urlParams.get('view_dossier');
+    if (dossierId) {
+        viewFullDossier(dossierId);
     }
 });
 </script>

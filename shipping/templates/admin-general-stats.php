@@ -102,9 +102,20 @@ $sub = $_GET['sub'] ?? 'active-shipments';
 
 <div id="stats-realtime" class="shipping-internal-tab" style="display: <?php echo $sub == 'real-time-status' ? 'block' : 'none'; ?>;">
     <div class="shipping-card">
-        <h4>حالة العمليات المباشرة</h4>
-        <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px;">
-            <span class="dashicons dashicons-chart-line" style="font-size: 50px; color: #cbd5e0;"></span>
+        <h4>📊 حالة العمليات المباشرة</h4>
+        <?php
+        $status_counts = $wpdb->get_results("SELECT status, COUNT(*) as count FROM {$wpdb->prefix}shipping_shipments WHERE is_archived = 0 GROUP BY status");
+        ?>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+            <?php foreach ($status_counts as $sc): ?>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 13px; color: #64748b; margin-bottom: 5px;"><?php echo strtoupper($sc->status); ?></div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--shipping-primary-color);"><?php echo $sc->count; ?></div>
+                </div>
+            <?php endforeach; ?>
+            <?php if (empty($status_counts)): ?>
+                <p style="text-align: center; color: #94a3b8; padding: 20px;">لا توجد عمليات جارية حالياً.</p>
+            <?php endif; ?>
         </div>
     </div>
 </div>
