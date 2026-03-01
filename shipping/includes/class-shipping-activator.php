@@ -210,6 +210,10 @@ class Shipping_Activator {
             delivery_date datetime,
             carrier_id mediumint(9),
             route_id mediumint(9),
+            estimated_cost decimal(10,2) DEFAULT 0,
+            cost_breakdown_json text,
+            current_lat decimal(10,8),
+            current_lng decimal(11,8),
             is_archived tinyint(1) DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -242,6 +246,8 @@ class Shipping_Activator {
             status varchar(50) NOT NULL,
             location varchar(255),
             description text,
+            current_lat decimal(10,8),
+            current_lng decimal(11,8),
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id),
             KEY shipment_id (shipment_id),
@@ -262,15 +268,88 @@ class Shipping_Activator {
         ) $charset_collate;\n";
 
 
-        // Logistics Table
+        // Logistics Table (Routes)
         $table_name = $wpdb->prefix . 'shipping_logistics';
         $sql .= "CREATE TABLE $table_name (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             route_name varchar(255),
-            stop_points text,
-            fleet_details text,
-            warehouse_info text,
+            description text,
+            start_location varchar(255),
+            end_location varchar(255),
+            total_distance decimal(10,2),
+            estimated_duration varchar(50),
             PRIMARY KEY  (id)
+        ) $charset_collate;\n";
+
+        // Route Stop Points Table
+        $table_name = $wpdb->prefix . 'shipping_route_stops';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            route_id mediumint(9) NOT NULL,
+            stop_name varchar(255) NOT NULL,
+            location varchar(255),
+            lat decimal(10,8),
+            lng decimal(11,8),
+            stop_order int DEFAULT 0,
+            PRIMARY KEY  (id),
+            KEY route_id (route_id)
+        ) $charset_collate;\n";
+
+        // Warehouses Table
+        $table_name = $wpdb->prefix . 'shipping_warehouses';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            location varchar(255),
+            total_capacity decimal(10,2),
+            available_capacity decimal(10,2),
+            manager_name varchar(255),
+            contact_number varchar(50),
+            PRIMARY KEY  (id)
+        ) $charset_collate;\n";
+
+        // Inventory Table
+        $table_name = $wpdb->prefix . 'shipping_inventory';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            warehouse_id mediumint(9) NOT NULL,
+            item_name varchar(255) NOT NULL,
+            sku varchar(100),
+            quantity int DEFAULT 0,
+            unit varchar(50),
+            last_updated datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY warehouse_id (warehouse_id)
+        ) $charset_collate;\n";
+
+        // Fleet Table
+        $table_name = $wpdb->prefix . 'shipping_fleet';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            vehicle_number varchar(100) NOT NULL,
+            vehicle_type varchar(50),
+            capacity decimal(10,2),
+            status varchar(50) DEFAULT 'available',
+            driver_name varchar(255),
+            driver_phone varchar(50),
+            last_maintenance_date date,
+            next_maintenance_date date,
+            PRIMARY KEY  (id),
+            UNIQUE KEY vehicle_number (vehicle_number)
+        ) $charset_collate;\n";
+
+        // Maintenance Table
+        $table_name = $wpdb->prefix . 'shipping_maintenance';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            vehicle_id mediumint(9) NOT NULL,
+            maintenance_type varchar(100),
+            description text,
+            cost decimal(10,2),
+            maintenance_date date,
+            completed tinyint(1) DEFAULT 0,
+            PRIMARY KEY  (id),
+            KEY vehicle_id (vehicle_id)
         ) $charset_collate;\n";
 
         // Customs Table
@@ -296,7 +375,7 @@ class Shipping_Activator {
             discount_amount decimal(10,2),
             total_amount decimal(10,2),
             items_json text,
-            currency varchar(10) DEFAULT 'EGP',
+            currency varchar(10) DEFAULT 'SAR',
             due_date date,
             status varchar(50) DEFAULT 'unpaid',
             invoice_type varchar(50) DEFAULT 'one-time',
@@ -320,7 +399,7 @@ class Shipping_Activator {
             payment_date datetime DEFAULT CURRENT_TIMESTAMP,
             payment_method varchar(50),
             payment_status varchar(50),
-            currency varchar(10) DEFAULT 'EGP',
+            currency varchar(10) DEFAULT 'SAR',
             gateway_response text,
             notes text,
             PRIMARY KEY  (id),
@@ -342,7 +421,7 @@ class Shipping_Activator {
             KEY invoice_id (invoice_id)
         ) $charset_collate;\n";
 
-        // Pricing Table
+        // Pricing Table (Legacy/Basic)
         $table_name = $wpdb->prefix . 'shipping_pricing';
         $sql .= "CREATE TABLE $table_name (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
@@ -350,6 +429,48 @@ class Shipping_Activator {
             base_cost decimal(10,2),
             additional_fees decimal(10,2),
             special_offer_details text,
+            PRIMARY KEY  (id)
+        ) $charset_collate;\n";
+
+        // Advanced Pricing Rules
+        $table_name = $wpdb->prefix . 'shipping_pricing_rules';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            rule_name varchar(255) NOT NULL,
+            customer_type varchar(50) DEFAULT 'all',
+            shipment_category varchar(50) DEFAULT 'all',
+            min_weight decimal(10,2) DEFAULT 0,
+            max_weight decimal(10,2) DEFAULT 999999.99,
+            base_price decimal(10,2) DEFAULT 0,
+            price_per_kg decimal(10,2) DEFAULT 0,
+            price_per_km decimal(10,2) DEFAULT 0,
+            is_active tinyint(1) DEFAULT 1,
+            PRIMARY KEY  (id)
+        ) $charset_collate;\n";
+
+        // Additional Fees
+        $table_name = $wpdb->prefix . 'shipping_additional_fees';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            fee_name varchar(255) NOT NULL,
+            fee_type enum('fixed', 'percentage') DEFAULT 'fixed',
+            fee_value decimal(10,2) NOT NULL,
+            apply_to varchar(50) DEFAULT 'all',
+            is_automated tinyint(1) DEFAULT 1,
+            PRIMARY KEY  (id)
+        ) $charset_collate;\n";
+
+        // Special Offers
+        $table_name = $wpdb->prefix . 'shipping_special_offers';
+        $sql .= "CREATE TABLE $table_name (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            offer_name varchar(255) NOT NULL,
+            promo_code varchar(50),
+            discount_type enum('fixed', 'percentage') DEFAULT 'percentage',
+            discount_value decimal(10,2) NOT NULL,
+            start_date date,
+            end_date date,
+            is_active tinyint(1) DEFAULT 1,
             PRIMARY KEY  (id)
         ) $charset_collate;\n";
 

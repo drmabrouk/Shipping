@@ -55,8 +55,12 @@ class Shipping_Admin {
     }
 
     public function enqueue_styles() {
+        wp_enqueue_media();
         wp_enqueue_style('google-font-rubik', 'https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;800;900&display=swap', array(), null);
         wp_add_inline_script('jquery', 'var ajaxurl = "' . admin_url('admin-ajax.php') . '";', 'before');
+        wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '4.4.1', true);
+        wp_enqueue_style('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', array(), '1.9.4');
+        wp_enqueue_script('leaflet-js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', array(), '1.9.4', true);
         wp_enqueue_style($this->plugin_name, SHIPPING_PLUGIN_URL . 'assets/css/shipping-admin.css', array(), $this->version, 'all');
 
         $appearance = Shipping_Settings::get_appearance();
