@@ -247,6 +247,8 @@ function importShipmentToInvoice() {
             // Re-calculate cost to get breakdown
             const fd = new FormData();
             fd.append('action', 'shipping_estimate_cost');
+            fd.append('customer_id', s.customer_id);
+            fd.append('classification', s.classification);
             fd.append('weight', s.weight);
             fd.append('distance', 100); // Default if distance unknown
             fd.append('is_urgent', s.classification === 'express' ? 1 : 0);

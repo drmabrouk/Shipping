@@ -502,6 +502,114 @@ class Shipping_Activator {
 
         self::setup_roles();
         self::seed_notification_templates();
+        self::seed_sample_data();
+    }
+
+    private static function seed_sample_data() {
+        global $wpdb;
+        // Only seed if no customers exist
+        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}shipping_customers");
+        if ($count > 0) return;
+
+        // 1. Customers (5)
+        $customers = [
+            ['username' => 'ahmed_user', 'first_name' => 'أحمد', 'last_name' => 'علي', 'email' => 'ahmed@example.com', 'phone' => '0501234567', 'account_status' => 'active', 'classification' => 'regular'],
+            ['username' => 'sara_corp', 'first_name' => 'سارة', 'last_name' => 'محمود', 'email' => 'sara@example.com', 'phone' => '0559876543', 'account_status' => 'active', 'classification' => 'vip'],
+            ['username' => 'khaled_logistics', 'first_name' => 'خالد', 'last_name' => 'حسن', 'email' => 'khaled@example.com', 'phone' => '0561122334', 'account_status' => 'active', 'classification' => 'regular'],
+            ['username' => 'mona_shop', 'first_name' => 'منى', 'last_name' => 'يوسف', 'email' => 'mona@example.com', 'phone' => '0544433221', 'account_status' => 'active', 'classification' => 'regular'],
+            ['username' => 'omar_trade', 'first_name' => 'عمر', 'last_name' => 'إبراهيم', 'email' => 'omar@example.com', 'phone' => '0533322114', 'account_status' => 'restricted', 'classification' => 'regular']
+        ];
+        foreach ($customers as $c) {
+            $wp_user_id = wp_insert_user([
+                'user_login' => $c['username'],
+                'user_email' => $c['email'],
+                'user_pass' => 'password123',
+                'display_name' => $c['first_name'] . ' ' . $c['last_name'],
+                'role' => 'subscriber'
+            ]);
+            if (!is_wp_error($wp_user_id)) {
+                $wpdb->insert("{$wpdb->prefix}shipping_customers", array_merge($c, ['wp_user_id' => $wp_user_id, 'registration_date' => date('Y-m-d')]));
+            }
+        }
+
+        // 2. Warehouses (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_warehouses", ['name' => 'مستودع الرياض الرئيسي', 'location' => 'الرياض - حي السلي', 'total_capacity' => 5000, 'available_capacity' => 4200, 'manager_name' => 'فهد القحطاني', 'contact_number' => '0500001122']);
+        $w1_id = $wpdb->insert_id;
+        $wpdb->insert("{$wpdb->prefix}shipping_warehouses", ['name' => 'مستودع جدة البحري', 'location' => 'جدة - ميناء جدة الإسلامي', 'total_capacity' => 8000, 'available_capacity' => 7500, 'manager_name' => 'سالم الحربي', 'contact_number' => '0500003344']);
+        $w2_id = $wpdb->insert_id;
+
+        // 3. Inventory (some items)
+        $wpdb->insert("{$wpdb->prefix}shipping_inventory", ['warehouse_id' => $w1_id, 'item_name' => 'كراتين تغليف كبيرة', 'sku' => 'PKG-L', 'quantity' => 1200, 'unit' => 'قطعة']);
+        $wpdb->insert("{$wpdb->prefix}shipping_inventory", ['warehouse_id' => $w1_id, 'item_name' => 'أشرطة لاصقة هشة', 'sku' => 'TP-FRG', 'quantity' => 500, 'unit' => 'لفة']);
+        $wpdb->insert("{$wpdb->prefix}shipping_inventory", ['warehouse_id' => $w2_id, 'item_name' => 'منصات خشبية (Pallets)', 'sku' => 'PLT-WD', 'quantity' => 300, 'unit' => 'قطعة']);
+
+        // 4. Fleet (3)
+        $wpdb->insert("{$wpdb->prefix}shipping_fleet", ['vehicle_number' => 'أ ب ج 1234', 'vehicle_type' => 'شاحنة كبيرة', 'capacity' => 15000, 'status' => 'available', 'driver_name' => 'محمد سعد', 'driver_phone' => '0511111111']);
+        $v1_id = $wpdb->insert_id;
+        $wpdb->insert("{$wpdb->prefix}shipping_fleet", ['vehicle_number' => 'د هـ و 5678', 'vehicle_type' => 'دينا نقل', 'capacity' => 5000, 'status' => 'in-transit', 'driver_name' => 'ياسر خالد', 'driver_phone' => '0522222222']);
+        $v2_id = $wpdb->insert_id;
+        $wpdb->insert("{$wpdb->prefix}shipping_fleet", ['vehicle_number' => 'ر ز س 9012', 'vehicle_type' => 'فانيت توصيل', 'capacity' => 1000, 'status' => 'maintenance', 'driver_name' => 'عبدالله صالح', 'driver_phone' => '0533333333']);
+
+        // 5. Routes & Stops (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_logistics", ['route_name' => 'خط الرياض - الدمام السريع', 'start_location' => 'الرياض', 'end_location' => 'الدمام', 'total_distance' => 400, 'estimated_duration' => '4 ساعات']);
+        $r1_id = $wpdb->insert_id;
+        $wpdb->insert("{$wpdb->prefix}shipping_route_stops", ['route_id' => $r1_id, 'stop_name' => 'محطة تمير', 'location' => 'طريق الرياض الدمام', 'stop_order' => 1]);
+
+        $wpdb->insert("{$wpdb->prefix}shipping_logistics", ['route_name' => 'خط الغربية (جدة - مكة)', 'start_location' => 'جدة', 'end_location' => 'مكة المكرمة', 'total_distance' => 80, 'estimated_duration' => 'ساعة واحدة']);
+
+        // 6. Pricing Rules (3)
+        $wpdb->insert("{$wpdb->prefix}shipping_pricing_rules", ['rule_name' => 'شحن قياسي محلي', 'base_price' => 30.00, 'price_per_kg' => 2.50, 'price_per_km' => 0.10, 'customer_type' => 'all', 'shipment_category' => 'standard']);
+        $wpdb->insert("{$wpdb->prefix}shipping_pricing_rules", ['rule_name' => 'شحن VIP سريع', 'base_price' => 70.00, 'price_per_kg' => 5.00, 'price_per_km' => 0.20, 'customer_type' => 'vip', 'shipment_category' => 'express']);
+        $wpdb->insert("{$wpdb->prefix}shipping_pricing_rules", ['rule_name' => 'شحن مواد قابلة للكسر', 'base_price' => 50.00, 'price_per_kg' => 3.00, 'price_per_km' => 0.15, 'customer_type' => 'all', 'shipment_category' => 'fragile']);
+
+        // 7. Additional Fees (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_additional_fees", ['fee_name' => 'ضريبة القيمة المضافة', 'fee_type' => 'percentage', 'fee_value' => 15.00, 'is_automated' => 1]);
+        $wpdb->insert("{$wpdb->prefix}shipping_additional_fees", ['fee_name' => 'رسوم وقود متغيرة', 'fee_type' => 'fixed', 'fee_value' => 5.00, 'is_automated' => 1]);
+
+        // 8. Special Offers (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_special_offers", ['offer_name' => 'خصم الافتتاح', 'promo_code' => 'WELCOME10', 'discount_type' => 'percentage', 'discount_value' => 10.00, 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d', strtotime('+1 month'))]);
+        $wpdb->insert("{$wpdb->prefix}shipping_special_offers", ['offer_name' => 'كوبون الشتاء', 'promo_code' => 'WINTER', 'discount_type' => 'fixed', 'discount_value' => 25.00, 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d', strtotime('+3 months'))]);
+
+        // 9. Orders (4)
+        $wpdb->insert("{$wpdb->prefix}shipping_orders", ['order_number' => 'ORD-TEST001', 'customer_id' => 1, 'total_amount' => 150.00, 'status' => 'new', 'pickup_address' => 'الرياض، حي الملقا', 'delivery_address' => 'الدمام، حي الزهور']);
+        $o1_id = $wpdb->insert_id;
+        $wpdb->insert("{$wpdb->prefix}shipping_orders", ['order_number' => 'ORD-TEST002', 'customer_id' => 2, 'total_amount' => 340.50, 'status' => 'in-progress', 'pickup_address' => 'جدة، الحمراء', 'delivery_address' => 'مكة، العزيزية']);
+        $o2_id = $wpdb->insert_id;
+        $wpdb->insert("{$wpdb->prefix}shipping_orders", ['order_number' => 'ORD-TEST003', 'customer_id' => 3, 'total_amount' => 85.00, 'status' => 'completed', 'pickup_address' => 'الرياض، العليا', 'delivery_address' => 'الرياض، الروضة']);
+        $wpdb->insert("{$wpdb->prefix}shipping_orders", ['order_number' => 'ORD-TEST004', 'customer_id' => 4, 'total_amount' => 210.00, 'status' => 'cancelled', 'pickup_address' => 'الخبر، العقربية', 'delivery_address' => 'الجبيل، الصناعية']);
+
+        // 10. Shipments (4)
+        $wpdb->insert("{$wpdb->prefix}shipping_shipments", ['shipment_number' => 'SHP-LIVE100', 'customer_id' => 1, 'origin' => 'الرياض', 'destination' => 'الدمام', 'weight' => 10.5, 'status' => 'in-transit', 'carrier_id' => $v2_id, 'route_id' => $r1_id, 'current_lat' => 24.7136, 'current_lng' => 46.6753]);
+        $s1_id = $wpdb->insert_id;
+        $wpdb->update("{$wpdb->prefix}shipping_orders", ['shipment_id' => $s1_id], ['id' => $o1_id]);
+
+        $wpdb->insert("{$wpdb->prefix}shipping_shipments", ['shipment_number' => 'SHP-LIVE200', 'customer_id' => 2, 'origin' => 'جدة', 'destination' => 'مكة', 'weight' => 5.0, 'status' => 'out-for-delivery', 'carrier_id' => $v1_id, 'current_lat' => 21.4858, 'current_lng' => 39.1925]);
+        $s2_id = $wpdb->insert_id;
+        $wpdb->update("{$wpdb->prefix}shipping_orders", ['shipment_id' => $s2_id], ['id' => $o2_id]);
+
+        $wpdb->insert("{$wpdb->prefix}shipping_shipments", ['shipment_number' => 'SHP-ARCHIVED1', 'customer_id' => 3, 'origin' => 'الرياض', 'destination' => 'الرياض', 'weight' => 2.0, 'status' => 'delivered', 'is_archived' => 1]);
+        $wpdb->insert("{$wpdb->prefix}shipping_shipments", ['shipment_number' => 'SHP-PENDING1', 'customer_id' => 4, 'origin' => 'الخبر', 'destination' => 'الجبيل', 'weight' => 15.0, 'status' => 'pending']);
+
+        // 11. Maintenance Logs (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_maintenance", ['vehicle_id' => $v1_id, 'maintenance_type' => 'تغيير زيت وفلاتر', 'description' => 'صيانة دورية كل 10 آلاف كم', 'cost' => 450.00, 'maintenance_date' => date('Y-m-d', strtotime('-1 month')), 'completed' => 1]);
+        $wpdb->insert("{$wpdb->prefix}shipping_maintenance", ['vehicle_id' => $v2_id, 'maintenance_type' => 'إصلاح فرامل', 'description' => 'تغيير فحمات أمامية', 'cost' => 800.00, 'maintenance_date' => date('Y-m-d'), 'completed' => 0]);
+
+        // 12. Invoices (3)
+        $wpdb->insert("{$wpdb->prefix}shipping_invoices", ['invoice_number' => 'INV-2024-001', 'customer_id' => 1, 'subtotal' => 100.00, 'tax_amount' => 15.00, 'total_amount' => 115.00, 'status' => 'paid', 'due_date' => date('Y-m-d')]);
+        $inv1_id = $wpdb->insert_id;
+        $wpdb->insert("{$wpdb->prefix}shipping_invoices", ['invoice_number' => 'INV-2024-002', 'customer_id' => 2, 'subtotal' => 300.00, 'tax_amount' => 45.00, 'total_amount' => 345.00, 'status' => 'unpaid', 'due_date' => date('Y-m-d', strtotime('+3 days'))]);
+        $wpdb->insert("{$wpdb->prefix}shipping_invoices", ['invoice_number' => 'INV-2024-003', 'customer_id' => 3, 'subtotal' => 50.00, 'tax_amount' => 7.50, 'total_amount' => 57.50, 'status' => 'unpaid', 'due_date' => date('Y-m-d', strtotime('-2 days'))]);
+
+        // 13. Payments (1)
+        $wpdb->insert("{$wpdb->prefix}shipping_payments", ['invoice_id' => $inv1_id, 'transaction_id' => 'TRX-998877', 'amount_paid' => 115.00, 'payment_method' => 'online', 'payment_status' => 'completed', 'currency' => 'SAR']);
+
+        // 14. Order Logs (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_order_logs", ['order_id' => $o1_id, 'user_id' => 1, 'action' => 'تحديث الحالة', 'old_value' => 'new', 'new_value' => 'in-progress']);
+        $wpdb->insert("{$wpdb->prefix}shipping_order_logs", ['order_id' => $o1_id, 'user_id' => 1, 'action' => 'ربط شحنة', 'new_value' => 'SHP-LIVE100']);
+
+        // 15. Tracking Events (2)
+        $wpdb->insert("{$wpdb->prefix}shipping_shipment_tracking_events", ['shipment_id' => $s1_id, 'status' => 'picked-up', 'location' => 'مستودع الرياض', 'description' => 'تم استلام الشحنة من المرسل']);
+        $wpdb->insert("{$wpdb->prefix}shipping_shipment_tracking_events", ['shipment_id' => $s1_id, 'status' => 'in-transit', 'location' => 'طريق الرياض الدمام', 'description' => 'الشحنة في الطريق للوجهة']);
     }
 
     private static function seed_notification_templates() {

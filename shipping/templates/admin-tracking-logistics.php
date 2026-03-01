@@ -795,7 +795,7 @@ $sub = $_GET['sub'] ?? 'live-tracking';
         if (!document.getElementById('tracking-map')) return;
 
         if (!trackingMap) {
-            trackingMap = L.map('tracking-map').setView([26.8206, 30.8025], 6); // Center on Egypt
+            trackingMap = L.map('tracking-map').setView([23.8859, 45.0792], 6); // Center on Saudi Arabia
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(trackingMap);

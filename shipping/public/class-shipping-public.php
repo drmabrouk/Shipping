@@ -1912,8 +1912,13 @@ class Shipping_Public {
         );
 
         $id = Shipping_DB::add_shipment($data);
-        if ($id) wp_send_json_success($id);
-        else wp_send_json_error('Failed to create shipment');
+        if ($id) {
+            // Link to order if provided
+            if (!empty($_POST['order_id'])) {
+                Shipping_DB::update_order(intval($_POST['order_id']), ['shipment_id' => $id, 'status' => 'in-progress']);
+            }
+            wp_send_json_success($id);
+        } else wp_send_json_error('Failed to create shipment');
     }
 
     public function ajax_update_shipment() {
@@ -2011,6 +2016,7 @@ class Shipping_Public {
     public function ajax_get_orders() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         $args = [
+            'id' => intval($_GET['id'] ?? 0),
             'status' => sanitize_text_field($_GET['status'] ?? ''),
             'customer_id' => intval($_GET['customer_id'] ?? 0),
             'search' => sanitize_text_field($_GET['search'] ?? '')

@@ -106,6 +106,51 @@ foreach($statuses as $status => $id): ?>
     </div>
 </div>
 
+<!-- Edit Order Modal -->
+<div id="modal-edit-order" class="shipping-modal">
+    <div class="shipping-modal-content" style="max-width: 650px;">
+        <div class="shipping-modal-header">
+            <h4>تعديل طلب الشحن</h4>
+            <button onclick="document.getElementById('modal-edit-order').style.display='none'">&times;</button>
+        </div>
+        <form id="form-edit-order">
+            <input type="hidden" name="id">
+            <div class="shipping-modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="shipping-form-group">
+                        <label>العميل</label>
+                        <select name="customer_id" class="shipping-input" required>
+                            <?php
+                            $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers ORDER BY name ASC");
+                            foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
+                            ?>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>المبلغ الإجمالي (SAR)</label>
+                        <input type="number" step="0.01" name="total_amount" class="shipping-input" required>
+                    </div>
+                </div>
+                <div class="shipping-form-group">
+                    <label>عنوان الاستلام</label>
+                    <textarea name="pickup_address" class="shipping-textarea" rows="2" required></textarea>
+                </div>
+                <div class="shipping-form-group">
+                    <label>عنوان التسليم</label>
+                    <textarea name="delivery_address" class="shipping-textarea" rows="2" required></textarea>
+                </div>
+                <div class="shipping-form-group">
+                    <label>تفاصيل الشحنة / ملاحظات</label>
+                    <textarea name="order_details" class="shipping-textarea" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="shipping-modal-footer">
+                <button type="submit" class="shipping-btn">حفظ التعديلات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Order Logs Modal -->
 <div id="modal-order-logs" class="shipping-modal">
     <div class="shipping-modal-content" style="max-width: 600px;">
@@ -154,6 +199,7 @@ function loadOrders(status = currentStatus) {
                 <td>
                     <div style="display:flex; gap:5px;">
                         <button class="shipping-btn-icon" title="سجل الطلب" onclick="viewOrderLogs(${o.id}, '${o.order_number}')">📜</button>
+                        <button class="shipping-btn-icon" title="تعديل الطلب" onclick='openEditOrderModal(${JSON.stringify(o).replace(/"/g, '&quot;')})'>✏️</button>
                         ${o.status === 'new' ? `<button class="shipping-btn-icon" title="تجهيز الشحن" style="background:#3182ce; color:#fff;" onclick="prepareShipment(${o.id})">📦</button>` : ''}
                         ${o.status !== 'completed' && o.status !== 'cancelled' ? `
                             <button class="shipping-btn-icon" title="تحديث الحالة" style="background:#38a169; color:#fff;" onclick="updateOrderStatus(${o.id}, '${getNextStatus(o.status)}')">⏭️</button>
@@ -278,6 +324,35 @@ function debounceOrderSearch() {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => loadOrders(currentStatus), 500);
 }
+
+function openEditOrderModal(o) {
+    const f = document.getElementById('form-edit-order');
+    f.id.value = o.id;
+    f.customer_id.value = o.customer_id;
+    f.total_amount.value = o.total_amount;
+    f.pickup_address.value = o.pickup_address;
+    f.delivery_address.value = o.delivery_address;
+    f.order_details.value = o.order_details;
+    document.getElementById('modal-edit-order').style.display = 'flex';
+}
+
+document.getElementById('form-edit-order')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('button');
+    btn.disabled = true; btn.innerText = 'جاري الحفظ...';
+    const fd = new FormData(this);
+    fd.append('action', 'shipping_update_order');
+    fd.append('nonce', '<?php echo wp_create_nonce("shipping_order_action"); ?>');
+
+    fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
+        btn.disabled = false; btn.innerText = 'حفظ التعديلات';
+        if (res.success) {
+            shippingShowNotification('تم تحديث الطلب بنجاح');
+            document.getElementById('modal-edit-order').style.display = 'none';
+            loadOrders(currentStatus);
+        } else alert(res.data);
+    });
+});
 
 // Form Submission
 document.getElementById('form-add-order')?.addEventListener('submit', function(e) {

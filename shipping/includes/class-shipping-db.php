@@ -327,6 +327,10 @@ class Shipping_DB {
         $where = "1=1";
         $params = array();
 
+        if (!empty($args['id'])) {
+            $where .= " AND o.id = %d";
+            $params[] = intval($args['id']);
+        }
         if (!empty($args['status'])) {
             $where .= " AND o.status = %s";
             $params[] = $args['status'];
@@ -1157,7 +1161,7 @@ class Shipping_DB {
         $analytics['shipment_count_by_status'] = $wpdb->get_results("SELECT status, COUNT(*) as count FROM {$wpdb->prefix}shipping_shipments GROUP BY status");
         $analytics['fleet_status'] = $wpdb->get_results("SELECT status, COUNT(*) as count FROM {$wpdb->prefix}shipping_fleet GROUP BY status");
         $analytics['total_maintenance_cost'] = $wpdb->get_var("SELECT SUM(cost) FROM {$wpdb->prefix}shipping_maintenance WHERE completed = 1");
-        $analytics['warehouse_utilization'] = $wpdb->get_results("SELECT name, (total_capacity - available_capacity) / total_capacity * 100 as utilization FROM {$wpdb->prefix}shipping_warehouses");
+        $analytics['warehouse_utilization'] = $wpdb->get_results("SELECT name, CASE WHEN total_capacity > 0 THEN (total_capacity - available_capacity) / total_capacity * 100 ELSE 0 END as utilization FROM {$wpdb->prefix}shipping_warehouses");
         return $analytics;
     }
 
