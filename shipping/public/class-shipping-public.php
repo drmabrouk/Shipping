@@ -60,6 +60,8 @@ class Shipping_Public {
         wp_enqueue_style('dashicons');
         wp_enqueue_style('google-font-rubik', 'https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;800;900&display=swap', array(), null);
         wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '4.4.1', true);
+        wp_enqueue_style('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', array(), '1.9.4');
+        wp_enqueue_script('leaflet-js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', array(), '1.9.4', true);
         wp_enqueue_style($this->plugin_name, SHIPPING_PLUGIN_URL . 'assets/css/shipping-public.css', array('dashicons'), $this->version, 'all');
 
         $appearance = Shipping_Settings::get_appearance();
@@ -1932,9 +1934,16 @@ class Shipping_Public {
         if (!is_user_logged_in()) wp_send_json_error('Unauthorized');
         check_ajax_referer('shipping_shipment_action', 'nonce');
         $val = $_GET['id'] ?? $_GET['number'];
-        $shipment = Shipping_DB::get_shipment_with_tracking($val);
-        if ($shipment) wp_send_json_success($shipment);
-        else wp_send_json_error('Shipment not found');
+
+        if ($val === 'all') {
+            global $wpdb;
+            $shipments = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}shipping_shipments WHERE status != 'delivered' AND is_archived = 0 AND current_lat IS NOT NULL");
+            wp_send_json_success($shipments);
+        } else {
+            $shipment = Shipping_DB::get_shipment_with_tracking($val);
+            if ($shipment) wp_send_json_success($shipment);
+            else wp_send_json_error('Shipment not found');
+        }
     }
 
     public function ajax_bulk_shipments() {
@@ -2020,6 +2029,183 @@ class Shipping_Public {
         $res = Shipping_DB::add_pricing_rule($_POST);
         if ($res) wp_send_json_success($res);
         else wp_send_json_error('Failed to add pricing rule');
+    }
+
+    public function ajax_get_routes() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_routes());
+    }
+
+    public function ajax_update_route() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        $id = intval($_POST['id']);
+        if (Shipping_DB::update_route($id, $_POST)) wp_send_json_success();
+        else wp_send_json_error('Failed to update route');
+    }
+
+    public function ajax_delete_route() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::delete_route(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete route');
+    }
+
+    public function ajax_get_route_stops() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_route_stops(intval($_GET['route_id'])));
+    }
+
+    public function ajax_add_route_stop() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        $res = Shipping_DB::add_route_stop($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add route stop');
+    }
+
+    public function ajax_update_route_stop() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::update_route_stop(intval($_POST['id']), $_POST)) wp_send_json_success();
+        else wp_send_json_error('Failed to update route stop');
+    }
+
+    public function ajax_delete_route_stop() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::delete_route_stop(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete route stop');
+    }
+
+    public function ajax_get_warehouses() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_warehouses());
+    }
+
+    public function ajax_add_warehouse() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        $res = Shipping_DB::add_warehouse($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add warehouse');
+    }
+
+    public function ajax_update_warehouse() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::update_warehouse(intval($_POST['id']), $_POST)) wp_send_json_success();
+        else wp_send_json_error('Failed to update warehouse');
+    }
+
+    public function ajax_delete_warehouse() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::delete_warehouse(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete warehouse');
+    }
+
+    public function ajax_get_inventory() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_inventory(intval($_GET['warehouse_id'])));
+    }
+
+    public function ajax_add_inventory_item() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        $res = Shipping_DB::add_inventory_item($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add inventory item');
+    }
+
+    public function ajax_update_inventory_item() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::update_inventory_item(intval($_POST['id']), $_POST)) wp_send_json_success();
+        else wp_send_json_error('Failed to update inventory item');
+    }
+
+    public function ajax_delete_inventory_item() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::delete_inventory_item(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete inventory item');
+    }
+
+    public function ajax_get_fleet() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_fleet());
+    }
+
+    public function ajax_add_vehicle() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        $res = Shipping_DB::add_vehicle($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add vehicle');
+    }
+
+    public function ajax_update_vehicle() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::update_vehicle(intval($_POST['id']), $_POST)) wp_send_json_success();
+        else wp_send_json_error('Failed to update vehicle');
+    }
+
+    public function ajax_delete_vehicle() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::delete_vehicle(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete vehicle');
+    }
+
+    public function ajax_get_maintenance_logs() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_maintenance_logs(intval($_GET['vehicle_id'])));
+    }
+
+    public function ajax_add_maintenance_log() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        $res = Shipping_DB::add_maintenance_log($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add maintenance log');
+    }
+
+    public function ajax_update_maintenance_log() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::update_maintenance_log(intval($_POST['id']), $_POST)) wp_send_json_success();
+        else wp_send_json_error('Failed to update maintenance log');
+    }
+
+    public function ajax_delete_maintenance_log() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_logistic_action', 'nonce');
+        if (Shipping_DB::delete_maintenance_log(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete maintenance log');
+    }
+
+    public function ajax_get_logistics_analytics() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_logistics_analytics());
+    }
+
+    public function ajax_update_shipment_location() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_shipment_action', 'nonce');
+        $id = intval($_POST['id']);
+        $data = array(
+            'current_lat' => floatval($_POST['lat']),
+            'current_lng' => floatval($_POST['lng']),
+            'location' => sanitize_text_field($_POST['location'] ?? '')
+        );
+        if (Shipping_DB::update_shipment($id, $data)) {
+            Shipping_DB::log_shipment_event($id, $_POST['status'] ?? 'in-transit', 'Location updated', $data['location']);
+            wp_send_json_success();
+        } else {
+            wp_send_json_error('Failed to update location');
+        }
     }
 
     public function inject_global_alerts() {

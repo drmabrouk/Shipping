@@ -42,8 +42,26 @@ $sub = $_GET['sub'] ?? 'create-shipment';
             <div class="shipping-form-group"><label>تاريخ الاستلام:</label><input type="datetime-local" name="pickup_date" class="shipping-input"></div>
             <div class="shipping-form-group"><label>تاريخ الشحن المتوقع:</label><input type="datetime-local" name="dispatch_date" class="shipping-input"></div>
             <div class="shipping-form-group"><label>تاريخ التسليم المتوقع:</label><input type="datetime-local" name="delivery_date" class="shipping-input"></div>
-            <div class="shipping-form-group"><label>الناقل (Carrier):</label><select name="carrier_id" class="shipping-select"><option value="0">داخلي</option></select></div>
-            <div class="shipping-form-group"><label>المسار (Route):</label><select name="route_id" class="shipping-select"><option value="0">اختر المسار...</option></select></div>
+            <div class="shipping-form-group">
+                <label>المركبة (Fleet):</label>
+                <select name="carrier_id" class="shipping-select">
+                    <option value="0">غير محدد</option>
+                    <?php
+                    $fleet = $wpdb->get_results("SELECT id, vehicle_number FROM {$wpdb->prefix}shipping_fleet WHERE status = 'available'");
+                    foreach($fleet as $v) echo "<option value='{$v->id}'>".esc_html($v->vehicle_number)."</option>";
+                    ?>
+                </select>
+            </div>
+            <div class="shipping-form-group">
+                <label>المسار (Route):</label>
+                <select name="route_id" class="shipping-select">
+                    <option value="0">اختر المسار...</option>
+                    <?php
+                    $routes = $wpdb->get_results("SELECT id, route_name FROM {$wpdb->prefix}shipping_logistics");
+                    foreach($routes as $r) echo "<option value='{$r->id}'>".esc_html($r->route_name)."</option>";
+                    ?>
+                </select>
+            </div>
             <button type="submit" class="shipping-btn" style="grid-column: span 3; height: 50px; font-weight: 800;">تأكيد وإنشاء الشحنة</button>
         </form>
     </div>
