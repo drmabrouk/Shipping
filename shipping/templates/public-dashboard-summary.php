@@ -20,7 +20,7 @@ $is_officer = current_user_can('manage_options');
     </div>
     <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
         <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">إجمالي الإيرادات</div>
-        <div style="font-size: 1.8em; font-weight: 900; color: #27ae60; margin-top: 10px;"><?php echo number_format($stats['total_revenue'] ?? 0, 0); ?> <span style="font-size: 0.4em;">EGP</span></div>
+        <div style="font-size: 1.8em; font-weight: 900; color: #27ae60; margin-top: 10px;"><?php echo number_format($stats['total_revenue'] ?? 0, 0); ?> <span style="font-size: 0.4em;">SAR</span></div>
     </div>
 </div>
 

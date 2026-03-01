@@ -1907,7 +1907,8 @@ class Shipping_Public {
             'dispatch_date' => $_POST['dispatch_date'],
             'delivery_date' => $_POST['delivery_date'],
             'carrier_id' => intval($_POST['carrier_id']),
-            'route_id' => intval($_POST['route_id'])
+            'route_id' => intval($_POST['route_id']),
+            'estimated_cost' => floatval($_POST['estimated_cost'] ?? 0)
         );
 
         $id = Shipping_DB::add_shipment($data);
@@ -2029,6 +2030,64 @@ class Shipping_Public {
         $res = Shipping_DB::add_pricing_rule($_POST);
         if ($res) wp_send_json_success($res);
         else wp_send_json_error('Failed to add pricing rule');
+    }
+
+    public function ajax_get_pricing_rules() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_pricing_rules());
+    }
+
+    public function ajax_delete_pricing_rule() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_pricing_action', 'nonce');
+        if (Shipping_DB::delete_pricing_rule(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete pricing rule');
+    }
+
+    public function ajax_get_additional_fees() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_additional_fees());
+    }
+
+    public function ajax_add_additional_fee() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_pricing_action', 'nonce');
+        $res = Shipping_DB::add_additional_fee($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add additional fee');
+    }
+
+    public function ajax_delete_additional_fee() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_pricing_action', 'nonce');
+        if (Shipping_DB::delete_additional_fee(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete additional fee');
+    }
+
+    public function ajax_get_special_offers() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_special_offers());
+    }
+
+    public function ajax_add_special_offer() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_pricing_action', 'nonce');
+        $res = Shipping_DB::add_special_offer($_POST);
+        if ($res) wp_send_json_success($res);
+        else wp_send_json_error('Failed to add special offer');
+    }
+
+    public function ajax_delete_special_offer() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_pricing_action', 'nonce');
+        if (Shipping_DB::delete_special_offer(intval($_POST['id']))) wp_send_json_success();
+        else wp_send_json_error('Failed to delete special offer');
+    }
+
+    public function ajax_estimate_cost() {
+        if (!is_user_logged_in()) wp_send_json_error('Unauthorized');
+        $res = Shipping_DB::estimate_shipment_cost($_POST);
+        wp_send_json_success($res);
     }
 
     public function ajax_get_routes() {

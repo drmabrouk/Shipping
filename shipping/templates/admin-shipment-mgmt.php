@@ -13,57 +13,97 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 
 <!-- 1. Centralized Shipment Creation -->
 <div id="shipment-create" class="shipping-internal-tab" style="display: <?php echo $sub == 'create-shipment' ? 'block' : 'none'; ?>;">
-    <div class="shipping-card">
-        <h4>إنشاء شحنة جديدة</h4>
-        <form id="shipping-create-shipment-form" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-top:15px;">
-            <div class="shipping-form-group">
-                <label>العميل:</label>
-                <select name="customer_id" class="shipping-select" required>
-                    <option value="">اختر العميل...</option>
-                    <?php
-                    $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers");
-                    foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
-                    ?>
-                </select>
+    <div class="shipping-grid" style="grid-template-columns: 2fr 1fr;">
+        <div class="shipping-card">
+            <h4>إنشاء شحنة جديدة</h4>
+            <form id="shipping-create-shipment-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px;">
+                <div class="shipping-form-group" style="grid-column: span 2;">
+                    <label>العميل:</label>
+                    <select name="customer_id" class="shipping-select" required>
+                        <option value="">اختر العميل...</option>
+                        <?php
+                        $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers");
+                        foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
+                        ?>
+                    </select>
+                </div>
+                <div class="shipping-form-group"><label>نقطة الانطلاق:</label><input type="text" name="origin" class="shipping-input" required></div>
+                <div class="shipping-form-group"><label>نقطة الوصول:</label><input type="text" name="destination" class="shipping-input" required></div>
+
+                <div class="shipping-form-group">
+                    <label>الوزن (كجم):</label>
+                    <input type="number" name="weight" id="shipment-weight" step="0.01" class="shipping-input" required onchange="calculateRealtimeCost()">
+                </div>
+                <div class="shipping-form-group">
+                    <label>المسافة التقريبية (كم):</label>
+                    <input type="number" name="distance" id="shipment-distance" class="shipping-input" placeholder="0" onchange="calculateRealtimeCost()">
+                </div>
+
+                <div class="shipping-form-group"><label>الأبعاد (L x W x H):</label><input type="text" name="dimensions" class="shipping-input" placeholder="30x30x30"></div>
+
+                <div class="shipping-form-group">
+                    <label>التصنيف:</label>
+                    <select name="classification" id="shipment-classification" class="shipping-select" onchange="calculateRealtimeCost()">
+                        <option value="standard">قياسي (Standard)</option>
+                        <option value="express">سريع (Express)</option>
+                        <option value="priority">أولوية (Priority)</option>
+                        <option value="fragile">قابل للكسر (Fragile)</option>
+                    </select>
+                </div>
+
+                <div class="shipping-form-group" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 10px; margin-top: 5px;">
+                    <label style="font-weight: 700;">خيارات إضافية:</label>
+                    <div style="display: flex; gap: 20px; margin-top: 10px;">
+                        <label><input type="checkbox" name="is_urgent" value="1" onchange="calculateRealtimeCost()"> شحن مستعجل</label>
+                        <label><input type="checkbox" name="is_insured" value="1" onchange="calculateRealtimeCost()"> تأمين الشحنة</label>
+                    </div>
+                </div>
+
+                <div class="shipping-form-group"><label>تاريخ الاستلام:</label><input type="datetime-local" name="pickup_date" class="shipping-input"></div>
+                <div class="shipping-form-group"><label>تاريخ التسليم المتوقع:</label><input type="datetime-local" name="delivery_date" class="shipping-input"></div>
+
+                <div class="shipping-form-group">
+                    <label>المركبة (Fleet):</label>
+                    <select name="carrier_id" class="shipping-select">
+                        <option value="0">غير محدد</option>
+                        <?php
+                        $fleet = $wpdb->get_results("SELECT id, vehicle_number FROM {$wpdb->prefix}shipping_fleet WHERE status = 'available'");
+                        foreach($fleet as $v) echo "<option value='{$v->id}'>".esc_html($v->vehicle_number)."</option>";
+                        ?>
+                    </select>
+                </div>
+                <div class="shipping-form-group">
+                    <label>المسار (Route):</label>
+                    <select name="route_id" class="shipping-select">
+                        <option value="0">اختر المسار...</option>
+                        <?php
+                        $routes = $wpdb->get_results("SELECT id, route_name FROM {$wpdb->prefix}shipping_logistics");
+                        foreach($routes as $r) echo "<option value='{$r->id}'>".esc_html($r->route_name)."</option>";
+                        ?>
+                    </select>
+                </div>
+
+                <input type="hidden" name="estimated_cost" id="shipment-estimated-cost-input" value="0">
+                <button type="submit" class="shipping-btn" style="grid-column: span 2; height: 50px; font-weight: 800; margin-top: 10px;">تأكيد وإنشاء الشحنة</button>
+            </form>
+        </div>
+
+        <div class="shipping-card" id="realtime-cost-card" style="background: #f8fafc; border: 2px solid #e2e8f0;">
+            <h4 style="margin-top:0; color: #4a5568;">💰 ملخص التكلفة التقديرية</h4>
+            <div id="cost-loader" style="display: none; text-align: center; padding: 20px;">
+                <span class="dashicons dashicons-update spin" style="font-size: 30px; width: 30px; height: 30px;"></span>
             </div>
-            <div class="shipping-form-group"><label>نقطة الانطلاق:</label><input type="text" name="origin" class="shipping-input" required></div>
-            <div class="shipping-form-group"><label>نقطة الوصول:</label><input type="text" name="destination" class="shipping-input" required></div>
-            <div class="shipping-form-group"><label>الوزن (كجم):</label><input type="number" name="weight" step="0.01" class="shipping-input" required></div>
-            <div class="shipping-form-group"><label>الأبعاد (L x W x H):</label><input type="text" name="dimensions" class="shipping-input" placeholder="مثال: 10x20x30" required></div>
-            <div class="shipping-form-group">
-                <label>التصنيف:</label>
-                <select name="classification" class="shipping-select">
-                    <option value="standard">قياسي (Standard)</option>
-                    <option value="express">سريع (Express)</option>
-                    <option value="priority">أولوية (Priority)</option>
-                    <option value="fragile">قابل للكسر (Fragile)</option>
-                </select>
+            <div id="cost-details" style="display: block;">
+                <div style="text-align: center; padding: 25px; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e0; margin-bottom: 20px;">
+                    <div style="font-size: 0.85em; color: #718096; margin-bottom: 5px;">إجمالي التكلفة المتوقعة</div>
+                    <div style="font-size: 2.2em; font-weight: 900; color: var(--shipping-primary-color);" id="display-cost">0.00</div>
+                    <div style="font-weight: 700; color: #4a5568;">SAR</div>
+                </div>
+                <div id="cost-breakdown-list" style="font-size: 13px; color: #4a5568;">
+                    <p style="text-align: center; opacity: 0.7;">أدخل بيانات الوزن والمسافة لحساب التكلفة تلقائياً.</p>
+                </div>
             </div>
-            <div class="shipping-form-group"><label>تاريخ الاستلام:</label><input type="datetime-local" name="pickup_date" class="shipping-input"></div>
-            <div class="shipping-form-group"><label>تاريخ الشحن المتوقع:</label><input type="datetime-local" name="dispatch_date" class="shipping-input"></div>
-            <div class="shipping-form-group"><label>تاريخ التسليم المتوقع:</label><input type="datetime-local" name="delivery_date" class="shipping-input"></div>
-            <div class="shipping-form-group">
-                <label>المركبة (Fleet):</label>
-                <select name="carrier_id" class="shipping-select">
-                    <option value="0">غير محدد</option>
-                    <?php
-                    $fleet = $wpdb->get_results("SELECT id, vehicle_number FROM {$wpdb->prefix}shipping_fleet WHERE status = 'available'");
-                    foreach($fleet as $v) echo "<option value='{$v->id}'>".esc_html($v->vehicle_number)."</option>";
-                    ?>
-                </select>
-            </div>
-            <div class="shipping-form-group">
-                <label>المسار (Route):</label>
-                <select name="route_id" class="shipping-select">
-                    <option value="0">اختر المسار...</option>
-                    <?php
-                    $routes = $wpdb->get_results("SELECT id, route_name FROM {$wpdb->prefix}shipping_logistics");
-                    foreach($routes as $r) echo "<option value='{$r->id}'>".esc_html($r->route_name)."</option>";
-                    ?>
-                </select>
-            </div>
-            <button type="submit" class="shipping-btn" style="grid-column: span 3; height: 50px; font-weight: 800;">تأكيد وإنشاء الشحنة</button>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -196,6 +236,44 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 </div>
 
 <script>
+let costTimeout;
+function calculateRealtimeCost() {
+    clearTimeout(costTimeout);
+    const weight = document.getElementById('shipment-weight').value;
+    const distance = document.getElementById('shipment-distance').value;
+    if(!weight || !distance) return;
+
+    costTimeout = setTimeout(() => {
+        const form = document.getElementById('shipping-create-shipment-form');
+        const fd = new FormData(form);
+        fd.append('action', 'shipping_estimate_cost');
+
+        document.getElementById('cost-loader').style.display = 'block';
+        document.getElementById('cost-details').style.display = 'none';
+
+        fetch(ajaxurl, { method: 'POST', body: fd })
+        .then(r => r.json()).then(res => {
+            document.getElementById('cost-loader').style.display = 'none';
+            document.getElementById('cost-details').style.display = 'block';
+
+            if (res.success) {
+                const data = res.data;
+                document.getElementById('display-cost').innerText = data.total_cost.toFixed(2);
+                document.getElementById('shipment-estimated-cost-input').value = data.total_cost;
+
+                let html = '<div style="display:grid; gap:8px;">';
+                html += `<div style="display:flex; justify-content:space-between;"><span>التكلفة الأساسية:</span> <strong>${data.breakdown.base.toFixed(2)}</strong></div>`;
+                html += `<div style="display:flex; justify-content:space-between;"><span>وزن (${weight} كجم):</span> <strong>${data.breakdown.weight.toFixed(2)}</strong></div>`;
+                html += `<div style="display:flex; justify-content:space-between;"><span>مسافة (${distance} كم):</span> <strong>${data.breakdown.distance.toFixed(2)}</strong></div>`;
+                if (data.breakdown.fees > 0) html += `<div style="display:flex; justify-content:space-between; color:#c53030;"><span>إضافات:</span> <strong>+ ${data.breakdown.fees.toFixed(2)}</strong></div>`;
+                if (data.breakdown.discount > 0) html += `<div style="display:flex; justify-content:space-between; color:#2f855a;"><span>خصومات:</span> <strong>- ${data.breakdown.discount.toFixed(2)}</strong></div>`;
+                html += '</div>';
+                document.getElementById('cost-breakdown-list').innerHTML = html;
+            }
+        });
+    }, 500);
+}
+
 document.getElementById('shipping-create-shipment-form')?.addEventListener('submit', function(e) {
     e.preventDefault();
     const fd = new FormData(this);
@@ -204,8 +282,10 @@ document.getElementById('shipping-create-shipment-form')?.addEventListener('subm
 
     fetch(ajaxurl, {method:'POST', body:fd}).then(r=>r.json()).then(res=>{
         if(res.success) {
-            shippingShowNotification('تم إنشاء الشحنة بنجاح برقم: ' + res.data);
+            shippingShowNotification('تم إنشاء الشحنة بنجاح');
             this.reset();
+            document.getElementById('display-cost').innerText = '0.00';
+            document.getElementById('cost-breakdown-list').innerHTML = '<p style="text-align: center; opacity: 0.7;">أدخل بيانات الوزن والمسافة لحساب التكلفة تلقائياً.</p>';
         } else alert(res.data);
     });
 });
@@ -265,6 +345,9 @@ function processBulkShipments() {
 </script>
 
 <style>
+.spin { animation: spin 2s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
 .tracking-timeline::before {
     content: ""; position: absolute; right: 8px; top: 0; bottom: 0; width: 2px; background: #e2e8f0;
 }

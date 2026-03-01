@@ -617,6 +617,17 @@ class Shipping_DB {
         $stats = array();
         $stats['daily'] = $wpdb->get_results("SELECT DATE(payment_date) as date, SUM(amount_paid) as total FROM {$wpdb->prefix}shipping_payments GROUP BY DATE(payment_date) LIMIT 30");
         $stats['monthly'] = $wpdb->get_results("SELECT DATE_FORMAT(payment_date, '%Y-%m') as month, SUM(amount_paid) as total FROM {$wpdb->prefix}shipping_payments GROUP BY month LIMIT 12");
+
+        $today = date('Y-m-d');
+        $month = date('Y-m');
+
+        $stats['summary'] = [
+            'today' => floatval($wpdb->get_var($wpdb->prepare("SELECT SUM(amount_paid) FROM {$wpdb->prefix}shipping_payments WHERE DATE(payment_date) = %s", $today))),
+            'month' => floatval($wpdb->get_var($wpdb->prepare("SELECT SUM(amount_paid) FROM {$wpdb->prefix}shipping_payments WHERE DATE_FORMAT(payment_date, '%%Y-%%m') = %s", $month))),
+            'total_revenue' => floatval($wpdb->get_var("SELECT SUM(total_amount) FROM {$wpdb->prefix}shipping_invoices WHERE status = 'paid'")),
+            'total_discounts' => floatval($wpdb->get_var("SELECT SUM(discount_amount) FROM {$wpdb->prefix}shipping_invoices"))
+        ];
+
         return $stats;
     }
 
@@ -1057,12 +1068,153 @@ class Shipping_DB {
 
     public static function add_pricing_rule($data) {
         global $wpdb;
-        return $wpdb->insert($wpdb->prefix . 'shipping_pricing', array(
-            'service_name' => sanitize_text_field($data['service_name']),
-            'base_cost' => floatval($data['base_cost']),
-            'additional_fees' => floatval($data['additional_fees']),
-            'special_offer_details' => sanitize_textarea_field($data['special_offer_details'] ?? '')
+        return $wpdb->insert($wpdb->prefix . 'shipping_pricing_rules', array(
+            'rule_name' => sanitize_text_field($data['rule_name'] ?? $data['name']),
+            'customer_type' => sanitize_text_field($data['customer_type'] ?? 'all'),
+            'shipment_category' => sanitize_text_field($data['shipment_category'] ?? 'all'),
+            'min_weight' => floatval($data['min_weight'] ?? 0),
+            'max_weight' => floatval($data['max_weight'] ?? 999999.99),
+            'base_price' => floatval($data['base_price'] ?? 0),
+            'price_per_kg' => floatval($data['price_per_kg'] ?? 0),
+            'price_per_km' => floatval($data['price_per_km'] ?? 0),
+            'is_active' => 1
         ));
+    }
+
+    public static function get_pricing_rules() {
+        global $wpdb;
+        $results = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}shipping_pricing_rules ORDER BY id DESC");
+        foreach ($results as &$r) {
+            $r->name = $r->rule_name; // JS compatibility
+        }
+        return $results;
+    }
+
+    public static function delete_pricing_rule($id) {
+        global $wpdb;
+        return $wpdb->delete($wpdb->prefix . 'shipping_pricing_rules', array('id' => $id));
+    }
+
+    // Additional Fees
+    public static function add_additional_fee($data) {
+        global $wpdb;
+        return $wpdb->insert($wpdb->prefix . 'shipping_additional_fees', array(
+            'fee_name' => sanitize_text_field($data['fee_name']),
+            'fee_type' => sanitize_text_field($data['fee_type']),
+            'fee_value' => floatval($data['fee_value']),
+            'apply_to' => sanitize_text_field($data['apply_to'] ?? 'all'),
+            'is_automated' => 1
+        ));
+    }
+
+    public static function get_additional_fees() {
+        global $wpdb;
+        return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}shipping_additional_fees ORDER BY id DESC");
+    }
+
+    public static function delete_additional_fee($id) {
+        global $wpdb;
+        return $wpdb->delete($wpdb->prefix . 'shipping_additional_fees', array('id' => $id));
+    }
+
+    // Special Offers
+    public static function add_special_offer($data) {
+        global $wpdb;
+        return $wpdb->insert($wpdb->prefix . 'shipping_special_offers', array(
+            'offer_name' => sanitize_text_field($data['offer_name'] ?? $data['offer_code']),
+            'promo_code' => sanitize_text_field($data['promo_code'] ?? $data['offer_code'] ?? ''),
+            'discount_type' => sanitize_text_field($data['discount_type']),
+            'discount_value' => floatval($data['discount_value']),
+            'start_date' => $data['start_date'] ?? date('Y-m-d'),
+            'end_date' => $data['end_date'] ?? $data['expiry_date'] ?? null,
+            'is_active' => 1
+        ));
+    }
+
+    public static function get_special_offers() {
+        global $wpdb;
+        return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}shipping_special_offers ORDER BY id DESC");
+    }
+
+    public static function delete_special_offer($id) {
+        global $wpdb;
+        return $wpdb->delete($wpdb->prefix . 'shipping_special_offers', array('id' => $id));
+    }
+
+    // Advanced Cost Estimation Logic
+    public static function estimate_shipment_cost($data) {
+        global $wpdb;
+        $weight = floatval($data['weight']);
+        $distance = floatval($data['distance'] ?? 0);
+        $customer_id = intval($data['customer_id'] ?? 0);
+        $category = sanitize_text_field($data['classification'] ?? 'standard');
+        $is_urgent = !empty($data['is_urgent']);
+        $is_insured = !empty($data['is_insured']);
+
+        $customer = self::get_customer_by_id($customer_id);
+        $customer_type = $customer ? ($customer->classification ?: 'regular') : 'all';
+
+        // 1. Find Best Rule
+        $rule = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}shipping_pricing_rules
+             WHERE is_active = 1
+             AND (customer_type = %s OR customer_type = 'all')
+             AND (shipment_category = %s OR shipment_category = 'all')
+             AND %f BETWEEN min_weight AND max_weight
+             ORDER BY CASE WHEN customer_type != 'all' THEN 0 ELSE 1 END,
+                      CASE WHEN shipment_category != 'all' THEN 0 ELSE 1 END
+             LIMIT 1",
+            $customer_type, $category, $weight
+        ));
+
+        if (!$rule) {
+            $rule = (object)['base_price' => 50, 'price_per_kg' => 5, 'price_per_km' => 2];
+        }
+
+        $calc_weight_cost = $weight * $rule->price_per_kg;
+        $calc_distance_cost = $distance * $rule->price_per_km;
+
+        // 2. Add Automated Fees
+        $fees_list = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}shipping_additional_fees WHERE is_automated = 1");
+        $total_fees = 0;
+
+        foreach ($fees_list as $f) {
+            $amt = ($f->fee_type === 'percentage') ? ($rule->base_price * ($f->fee_value / 100)) : $f->fee_value;
+            $total_fees += $amt;
+        }
+
+        if ($is_urgent) $total_fees += ($rule->base_price * 0.5); // 50% extra for urgency
+        if ($is_insured) $total_fees += ($rule->base_price * 0.1); // 10% extra for insurance
+
+        // 3. Apply Special Offers / Promo Code
+        $total_before_discount = $rule->base_price + $calc_weight_cost + $calc_distance_cost + $total_fees;
+        $discount = 0;
+        $promo = $data['promo_code'] ?? $data['offer_code'] ?? '';
+
+        if (!empty($promo)) {
+            $offer = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}shipping_special_offers WHERE promo_code = %s AND is_active = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE())",
+                $promo
+            ));
+            if ($offer) {
+                $discount = ($offer->discount_type === 'percentage') ? ($total_before_discount * ($offer->discount_value / 100)) : $offer->discount_value;
+            }
+        }
+
+        $final_total = max(0, $total_before_discount - $discount);
+
+        // Structure expected by JS
+        return [
+            'total_cost' => $final_total,
+            'breakdown' => [
+                'base' => floatval($rule->base_price),
+                'weight' => $calc_weight_cost,
+                'distance' => $calc_distance_cost,
+                'fees' => $total_fees,
+                'discount' => $discount
+            ],
+            'rule_applied' => $rule->rule_name ?? 'Default'
+        ];
     }
 }
 }

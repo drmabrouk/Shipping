@@ -11,50 +11,101 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
 
 <!-- 1. Automated Invoice Generation -->
 <div id="billing-invoice" class="shipping-internal-tab" style="display: <?php echo $sub == 'invoice-gen' ? 'block' : 'none'; ?>;">
-    <div class="shipping-card">
-        <h4>إنشاء فاتورة جديدة</h4>
-        <form id="shipping-invoice-form" style="margin-top:20px;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
-                <div class="shipping-form-group">
-                    <label>العميل:</label>
-                    <select name="customer_id" class="shipping-select" required>
-                        <option value="">اختر العميل...</option>
-                        <?php
-                        $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers");
-                        foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
-                        ?>
+    <div class="shipping-grid" style="grid-template-columns: 2fr 1fr;">
+        <div class="shipping-card">
+            <h4>إصدار فاتورة شحن</h4>
+            <div style="background: #fdf2f2; padding: 15px; border-radius: 10px; border: 1px solid #fed7d7; margin-bottom: 20px; font-size: 13px;">
+                💡 <strong>نصيحة:</strong> يمكنك استيراد بيانات الشحنة لحساب التكلفة والبنود تلقائياً بناءً على قواعد التسعير المسجلة.
+            </div>
+
+            <div class="shipping-form-group" style="margin-bottom: 25px; display: flex; gap: 10px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <label>استيراد بيانات من رقم شحنة:</label>
+                    <input type="text" id="import-shipment-number" class="shipping-input" placeholder="SHP-XXXXXX">
+                </div>
+                <button type="button" class="shipping-btn" style="width: auto; height: 45px;" onclick="importShipmentToInvoice()">استيراد البيانات</button>
+            </div>
+
+            <form id="shipping-invoice-form">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div class="shipping-form-group">
+                        <label>العميل:</label>
+                        <select name="customer_id" id="invoice-customer-id" class="shipping-select" required>
+                            <option value="">اختر العميل...</option>
+                            <?php
+                            $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers");
+                            foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
+                            ?>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group"><label>تاريخ الاستحقاق:</label><input type="date" name="due_date" class="shipping-input" value="<?php echo date('Y-m-d', strtotime('+7 days')); ?>" required></div>
+                </div>
+
+                <div id="invoice-items-container">
+                    <h5 style="margin-bottom:15px; display: flex; justify-content: space-between;">
+                        بنود الفاتورة:
+                        <span id="invoice-shipment-ref" style="font-weight: normal; color: #718096;"></span>
+                    </h5>
+                    <!-- Items injected here -->
+                </div>
+                <button type="button" class="shipping-btn shipping-btn-outline" onclick="addInvoiceRow()" style="width:auto; margin-bottom:20px;">+ إضافة بند يدوي</button>
+
+                <div style="background:#f8fafc; padding:20px; border-radius:12px; margin-top:20px; border: 1px solid #e2e8f0;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>المجموع الفرعي:</span><strong id="invoice-subtotal">0.00</strong></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>الضريبة (15%):</span><strong id="invoice-tax">0.00</strong></div>
+                    <div style="display:flex; justify-content:space-between; border-top:2px solid #fff; padding-top:10px; margin-top: 10px; font-size:1.4em; color: var(--shipping-primary-color);"><span>الإجمالي النهائي:</span><strong id="invoice-total">0.00</strong></div>
+                </div>
+
+                <div style="margin-top:20px; display: flex; gap: 20px; align-items: center;">
+                    <label><input type="checkbox" name="is_recurring" value="1"> فاتورة متكررة</label>
+                    <select name="billing_interval" class="shipping-select" style="width:auto;">
+                        <option value="monthly">شهرياً</option>
+                        <option value="yearly">سنوياً</option>
                     </select>
                 </div>
-                <div class="shipping-form-group"><label>تاريخ الاستحقاق:</label><input type="date" name="due_date" class="shipping-input" required></div>
-            </div>
 
-            <div id="invoice-items-container">
-                <h5 style="margin-bottom:10px;">بنود الفاتورة:</h5>
-                <div class="invoice-item-row" style="display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <input type="text" placeholder="الوصف" class="shipping-input item-desc">
-                    <input type="number" placeholder="الكمية" class="shipping-input item-qty" value="1">
-                    <input type="number" placeholder="السعر" class="shipping-input item-price">
-                    <button type="button" class="shipping-btn" style="background:#e53e3e;" onclick="this.parentElement.remove()">حذف</button>
+                <button type="submit" class="shipping-btn" style="margin-top:25px; height:55px; font-weight:800; font-size: 1.1em;">إصدار وحفظ الفاتورة</button>
+            </form>
+        </div>
+
+        <div class="shipping-card" style="background: #f0f4f8;">
+            <h4>معاينة سريعة</h4>
+            <div id="invoice-preview-area" style="background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 400px; position: relative;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="margin: 0; color: #2d3748;">فاتورة ضريبية</h2>
+                    <div style="font-size: 12px; color: #718096; margin-top: 5px;">INVOICE DRAFT</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 40px; font-size: 13px;">
+                    <div>
+                        <strong>مُصدر الفاتورة:</strong><br>
+                        <?php echo esc_html($shipping['shipping_name']); ?><br>
+                        <?php echo esc_html($shipping['address']); ?>
+                    </div>
+                    <div style="text-align: left;">
+                        <strong>التاريخ:</strong> <?php echo date('Y-m-d'); ?><br>
+                        <strong>رقم المسودة:</strong> #TEMP-<?php echo time(); ?>
+                    </div>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #edf2f7; text-align: right;">
+                            <th style="padding: 10px;">الوصف</th>
+                            <th style="padding: 10px; text-align: center;">الكمية</th>
+                            <th style="padding: 10px; text-align: left;">السعر</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preview-items-body">
+                        <tr><td colspan="3" style="text-align: center; padding: 40px; color: #a0aec0;">أضف بنوداً لعرض المعاينة</td></tr>
+                    </tbody>
+                </table>
+                <div style="position: absolute; bottom: 30px; left: 30px; right: 30px; border-top: 2px solid #edf2f7; padding-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 16px;">
+                        <span>الإجمالي المستحق:</span>
+                        <span id="preview-total">0.00 SAR</span>
+                    </div>
                 </div>
             </div>
-            <button type="button" class="shipping-btn shipping-btn-outline" onclick="addInvoiceRow()" style="width:auto; margin-bottom:20px;">+ إضافة بند آخر</button>
-
-            <div style="background:#f8fafc; padding:20px; border-radius:12px; margin-top:20px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>المجموع الفرعي:</span><strong id="invoice-subtotal">0.00</strong></div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>الضريبة (14%):</span><strong id="invoice-tax">0.00</strong></div>
-                <div style="display:flex; justify-content:space-between; border-top:1px solid #eee; padding-top:10px; font-size:1.2em;"><span>الإجمالي النهائي:</span><strong id="invoice-total">0.00</strong></div>
-            </div>
-
-            <div style="margin-top:20px;">
-                <label><input type="checkbox" name="is_recurring" value="1"> فاتورة متكررة (اشتراك)</label>
-                <select name="billing_interval" class="shipping-select" style="width:auto; margin-right:10px;">
-                    <option value="monthly">شهرياً</option>
-                    <option value="yearly">سنوياً</option>
-                </select>
-            </div>
-
-            <button type="submit" class="shipping-btn" style="margin-top:20px; height:50px; font-weight:800;">إصدار الفاتورة وحفظها</button>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -97,11 +148,11 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:30px;">
             <div style="background:#f0fff4; padding:20px; border-radius:12px; text-align:center; border:1px solid #c6f6d5;">
                 <h5 style="margin-top:0;">إيرادات اليوم</h5>
-                <div style="font-size:2em; font-weight:800; color:#2f855a;">0.00 EGP</div>
+                <div style="font-size:2em; font-weight:800; color:#2f855a;" id="today-revenue">0.00 SAR</div>
             </div>
             <div style="background:#ebf8ff; padding:20px; border-radius:12px; text-align:center; border:1px solid #bee3f8;">
                 <h5 style="margin-top:0;">إيرادات الشهر الحالي</h5>
-                <div style="font-size:2em; font-weight:800; color:#2b6cb0;">0.00 EGP</div>
+                <div style="font-size:2em; font-weight:800; color:#2b6cb0;" id="month-revenue">0.00 SAR</div>
             </div>
         </div>
     </div>
@@ -127,24 +178,25 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
 </div>
 
 <script>
-function addInvoiceRow() {
+function addInvoiceRow(desc = '', qty = 1, price = 0) {
     const container = document.getElementById('invoice-items-container');
     const div = document.createElement('div');
     div.className = 'invoice-item-row';
     div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom:10px;';
     div.innerHTML = `
-        <input type="text" placeholder="الوصف" class="shipping-input item-desc">
-        <input type="number" placeholder="الكمية" class="shipping-input item-qty" value="1">
-        <input type="number" placeholder="السعر" class="shipping-input item-price">
-        <button type="button" class="shipping-btn" style="background:#e53e3e;" onclick="this.parentElement.remove()">حذف</button>
+        <input type="text" placeholder="الوصف" class="shipping-input item-desc" value="${desc}">
+        <input type="number" placeholder="الكمية" class="shipping-input item-qty" value="${qty}">
+        <input type="number" placeholder="السعر" class="shipping-input item-price" value="${price}">
+        <button type="button" class="shipping-btn" style="background:#e53e3e;" onclick="this.parentElement.remove(); calculateInvoice();">حذف</button>
     `;
     container.appendChild(div);
     attachInvoiceListeners();
+    calculateInvoice();
 }
 
 function attachInvoiceListeners() {
-    document.querySelectorAll('.item-qty, .item-price').forEach(input => {
-        input.oninput = calculateInvoice;
+    document.querySelectorAll('.item-qty, .item-price, .item-desc').forEach(input => {
+        input.oninput = () => { calculateInvoice(); updatePreview(); };
     });
 }
 
@@ -155,11 +207,62 @@ function calculateInvoice() {
         const price = parseFloat(row.querySelector('.item-price').value) || 0;
         subtotal += qty * price;
     });
-    const tax = subtotal * 0.14;
+    const tax = subtotal * 0.15; // 15% VAT
     const total = subtotal + tax;
     document.getElementById('invoice-subtotal').innerText = subtotal.toFixed(2);
     document.getElementById('invoice-tax').innerText = tax.toFixed(2);
     document.getElementById('invoice-total').innerText = total.toFixed(2);
+    updatePreview();
+}
+
+function updatePreview() {
+    const tbody = document.getElementById('preview-items-body');
+    let html = '';
+    let rowsFound = false;
+    document.querySelectorAll('.invoice-item-row').forEach(row => {
+        const desc = row.querySelector('.item-desc').value;
+        const qty = row.querySelector('.item-qty').value;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        if (desc) {
+            rowsFound = true;
+            html += `<tr><td style="padding:10px; border-bottom:1px solid #f7fafc;">${desc}</td><td style="text-align:center;">${qty}</td><td style="text-align:left;">${(qty * price).toFixed(2)}</td></tr>`;
+        }
+    });
+    tbody.innerHTML = rowsFound ? html : '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #a0aec0;">أضف بنوداً لعرض المعاينة</td></tr>';
+    document.getElementById('preview-total').innerText = document.getElementById('invoice-total').innerText + ' SAR';
+}
+
+function importShipmentToInvoice() {
+    const num = document.getElementById('import-shipment-number').value;
+    if(!num) return alert('يرجى إدخال رقم الشحنة');
+
+    fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + num + '&nonce=<?php echo wp_create_nonce("shipping_shipment_action"); ?>')
+    .then(r => r.json()).then(res => {
+        if(res.success) {
+            const s = res.data;
+            document.getElementById('invoice-customer-id').value = s.customer_id;
+            document.getElementById('invoice-items-container').innerHTML = '';
+            document.getElementById('invoice-shipment-ref').innerText = '(شحنة: ' + s.shipment_number + ')';
+
+            // Re-calculate cost to get breakdown
+            const fd = new FormData();
+            fd.append('action', 'shipping_estimate_cost');
+            fd.append('weight', s.weight);
+            fd.append('distance', 100); // Default if distance unknown
+            fd.append('is_urgent', s.classification === 'express' ? 1 : 0);
+
+            fetch(ajaxurl, { method:'POST', body: fd }).then(r=>r.json()).then(calcRes => {
+                if(calcRes.success) {
+                    const b = calcRes.data.breakdown;
+                    addInvoiceRow('تكلفة الشحن الأساسية (' + s.shipment_number + ')', 1, b.base);
+                    addInvoiceRow('تكلفة الوزن (' + s.weight + ' كجم)', 1, b.weight);
+                    addInvoiceRow('تكلفة المسافة والوجهة', 1, b.distance);
+                    if(b.fees > 0) addInvoiceRow('رسوم إضافية وخدمات خاصة', 1, b.fees);
+                    if(b.discount > 0) addInvoiceRow('خصومات وعروض ترويجية', 1, -b.discount);
+                }
+            });
+        } else alert('لم يتم العثور على الشحنة');
+    });
 }
 
 document.getElementById('shipping-invoice-form')?.addEventListener('submit', function(e) {
@@ -181,7 +284,7 @@ document.getElementById('shipping-invoice-form')?.addEventListener('submit', fun
     fd.append('tax_amount', document.getElementById('invoice-tax').innerText);
     fd.append('items_json', JSON.stringify(items));
 
-    fetch(ajaxurl, {method:'POST', body:fd}).then(r=>r.json()).then(res=>{
+    fetch(ajaxurl, {method:'POST', body:fd}).then(r=>r.json()).then(res => {
         if(res.success) {
             shippingShowNotification('تم إصدار الفاتورة بنجاح');
             location.reload();
@@ -209,7 +312,7 @@ document.getElementById('shipping-payment-form')?.addEventListener('submit', fun
 });
 
 window.onload = function() {
-    attachInvoiceListeners();
+    addInvoiceRow();
     const ctx = document.getElementById('revenueChart')?.getContext('2d');
     if(ctx) {
         fetch(ajaxurl + '?action=shipping_get_billing_report')
@@ -219,6 +322,9 @@ window.onload = function() {
                 const stats = res.data;
                 const labels = stats.monthly.map(s => s.month);
                 const data = stats.monthly.map(s => s.total);
+
+                document.getElementById('today-revenue').innerText = stats.summary.today.toFixed(2) + ' SAR';
+                document.getElementById('month-revenue').innerText = stats.summary.month.toFixed(2) + ' SAR';
 
                 new Chart(ctx, {
                     type: 'line',

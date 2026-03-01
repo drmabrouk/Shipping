@@ -96,7 +96,7 @@ $sub = $_GET['sub'] ?? 'active-shipments';
     ?>
     <div class="shipping-card">
         <h4>إجمالي الإيرادات (المحصلة)</h4>
-        <div style="font-size: 2em; font-weight: 800; color: #27ae60;"><?php echo number_format($total_revenue ?: 0, 2); ?> EGP</div>
+        <div style="font-size: 2em; font-weight: 800; color: #27ae60;"><?php echo number_format($total_revenue ?: 0, 2); ?> SAR</div>
     </div>
 </div>
 

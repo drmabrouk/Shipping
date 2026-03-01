@@ -136,7 +136,7 @@ class Shipping_Notifications {
         foreach ($overdue_invoices as $inv) {
             if ($inv->email) {
                 $subject = "تنبيه: فاتورة متأخرة السداد - " . $inv->invoice_number;
-                $message = "عزيزي العميل " . $inv->name . ",\n\nنود تذكيركم بوجود فاتورة متأخرة السداد برقم " . $inv->invoice_number . " بمبلغ " . $inv->total_amount . " EGP.\nيرجى السداد في أقرب وقت لتجنب انقطاع الخدمة.\n\nشكراً لكم.";
+                $message = "عزيزي العميل " . $inv->name . ",\n\nنود تذكيركم بوجود فاتورة متأخرة السداد برقم " . $inv->invoice_number . " بمبلغ " . $inv->total_amount . " SAR.\nيرجى السداد في أقرب وقت لتجنب انقطاع الخدمة.\n\nشكراً لكم.";
                 wp_mail($inv->email, $subject, $message);
             }
         }
