@@ -276,13 +276,106 @@ class Shipping_DB {
 
     public static function add_order($data) {
         global $wpdb;
-        return $wpdb->insert($wpdb->prefix . 'shipping_orders', array(
-            'order_number' => 'ORD-' . strtoupper(wp_generate_password(8, false)),
+        $order_number = 'ORD-' . strtoupper(wp_generate_password(8, false));
+        $res = $wpdb->insert($wpdb->prefix . 'shipping_orders', array(
+            'order_number' => $order_number,
             'customer_id' => intval($data['customer_id']),
             'total_amount' => floatval($data['total_amount']),
             'status' => 'new',
+            'pickup_address' => sanitize_textarea_field($data['pickup_address'] ?? ''),
+            'delivery_address' => sanitize_textarea_field($data['delivery_address'] ?? ''),
+            'order_details' => sanitize_textarea_field($data['order_details'] ?? ''),
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ));
+
+        if ($res) {
+            $order_id = $wpdb->insert_id;
+            self::log_order_event($order_id, 'Order Created', '', 'Status: new');
+            return $order_id;
+        }
+        return false;
+    }
+
+    public static function update_order($id, $data) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'shipping_orders';
+        $old_order = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id), ARRAY_A);
+        if (!$old_order) return false;
+
+        $update_data = array();
+        $fields = ['status', 'total_amount', 'pickup_address', 'delivery_address', 'order_details', 'shipment_id'];
+        foreach ($fields as $f) {
+            if (isset($data[$f])) $update_data[$f] = $data[$f];
+        }
+        $update_data['updated_at'] = current_time('mysql');
+
+        $res = $wpdb->update($table, $update_data, array('id' => $id));
+        if ($res !== false) {
+            foreach ($update_data as $key => $val) {
+                if (isset($old_order[$key]) && $old_order[$key] != $val) {
+                    self::log_order_event($id, "Updated $key", $old_order[$key], $val);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public static function get_orders($args = array()) {
+        global $wpdb;
+        $where = "1=1";
+        $params = array();
+
+        if (!empty($args['status'])) {
+            $where .= " AND o.status = %s";
+            $params[] = $args['status'];
+        }
+        if (!empty($args['customer_id'])) {
+            $where .= " AND o.customer_id = %d";
+            $params[] = intval($args['customer_id']);
+        }
+        if (!empty($args['search'])) {
+            $s = '%' . $wpdb->esc_like($args['search']) . '%';
+            $where .= " AND (o.order_number LIKE %s OR c.name LIKE %s)";
+            $params[] = $s; $params[] = $s;
+        }
+
+        $query = "SELECT o.*, c.name as customer_name, c.email as customer_email, c.phone as customer_phone
+                  FROM {$wpdb->prefix}shipping_orders o
+                  LEFT JOIN {$wpdb->prefix}shipping_customers c ON o.customer_id = c.id
+                  WHERE $where ORDER BY o.created_at DESC";
+
+        if (!empty($params)) return $wpdb->get_results($wpdb->prepare($query, $params));
+        return $wpdb->get_results($query);
+    }
+
+    public static function get_order_logs($order_id) {
+        global $wpdb;
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT l.*, u.display_name FROM {$wpdb->prefix}shipping_order_logs l
+             LEFT JOIN {$wpdb->prefix}users u ON l.user_id = u.ID
+             WHERE l.order_id = %d ORDER BY l.created_at DESC",
+            $order_id
+        ));
+    }
+
+    public static function log_order_event($order_id, $action, $old_val = '', $new_val = '') {
+        global $wpdb;
+        return $wpdb->insert($wpdb->prefix . 'shipping_order_logs', array(
+            'order_id' => intval($order_id),
+            'user_id' => get_current_user_id(),
+            'action' => sanitize_text_field($action),
+            'old_value' => is_array($old_val) ? json_encode($old_val) : $old_val,
+            'new_value' => is_array($new_val) ? json_encode($new_val) : $new_val,
             'created_at' => current_time('mysql')
         ));
+    }
+
+    public static function delete_order($id) {
+        global $wpdb;
+        $wpdb->delete($wpdb->prefix . 'shipping_order_logs', array('order_id' => $id));
+        return $wpdb->delete($wpdb->prefix . 'shipping_orders', array('id' => $id));
     }
 
 
@@ -482,6 +575,23 @@ class Shipping_DB {
             }
             if (isset($data['status'])) {
                 self::log_shipment_event($id, $data['status'], 'Status updated');
+
+                // Sync status to linked orders
+                $order_status_map = [
+                    'pending' => 'new',
+                    'in-transit' => 'in-progress',
+                    'out-for-delivery' => 'in-progress',
+                    'delivered' => 'completed',
+                    'cancelled' => 'cancelled',
+                    'delayed' => 'in-progress'
+                ];
+
+                if (isset($order_status_map[$data['status']])) {
+                    $wpdb->update($wpdb->prefix . 'shipping_orders',
+                        ['status' => $order_status_map[$data['status']]],
+                        ['shipment_id' => $id]
+                    );
+                }
 
                 // Trigger Automated Alert
                 $shipment = self::get_shipment_with_tracking($id);

@@ -62,6 +62,11 @@ class Shipping {
         $this->loader->add_action('wp_ajax_shipping_get_billing_report', $plugin_public, 'ajax_get_billing_report');
         $this->loader->add_action('wp_ajax_shipping_add_customer', $plugin_public, 'ajax_add_customer');
         $this->loader->add_action('wp_ajax_shipping_add_order', $plugin_public, 'ajax_add_order');
+        $this->loader->add_action('wp_ajax_shipping_get_orders', $plugin_public, 'ajax_get_orders');
+        $this->loader->add_action('wp_ajax_shipping_update_order', $plugin_public, 'ajax_update_order');
+        $this->loader->add_action('wp_ajax_shipping_delete_order', $plugin_public, 'ajax_delete_order');
+        $this->loader->add_action('wp_ajax_shipping_get_order_logs', $plugin_public, 'ajax_get_order_logs');
+        $this->loader->add_action('wp_ajax_shipping_bulk_update_orders', $plugin_public, 'ajax_bulk_update_orders');
         $this->loader->add_action('wp_ajax_shipping_add_route', $plugin_public, 'ajax_add_route');
         $this->loader->add_action('wp_ajax_shipping_get_routes', $plugin_public, 'ajax_get_routes');
         $this->loader->add_action('wp_ajax_shipping_update_route', $plugin_public, 'ajax_update_route');

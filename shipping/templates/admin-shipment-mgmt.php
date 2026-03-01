@@ -342,6 +342,25 @@ function processBulkShipments() {
         else alert(res.data);
     });
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id');
+    if (orderId) {
+        fetch(ajaxurl + '?action=shipping_get_orders&id=' + orderId)
+        .then(r => r.json()).then(res => {
+            if (res.success && res.data.length) {
+                const o = res.data[0];
+                const f = document.getElementById('shipping-create-shipment-form');
+                if (f) {
+                    f.customer_id.value = o.customer_id;
+                    f.origin.value = o.pickup_address;
+                    f.destination.value = o.delivery_address;
+                }
+            }
+        });
+    }
+});
 </script>
 
 <style>

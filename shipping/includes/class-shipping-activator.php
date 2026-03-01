@@ -262,9 +262,30 @@ class Shipping_Activator {
             customer_id mediumint(9),
             total_amount decimal(10,2),
             status varchar(50) DEFAULT 'new',
+            pickup_address text,
+            delivery_address text,
+            order_details text,
+            shipment_id mediumint(9),
+            created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            UNIQUE KEY order_number (order_number),
+            KEY customer_id (customer_id),
+            KEY status (status)
+        ) $charset_collate;\n";
+
+        // Order Logs Table (Audit Trail)
+        $table_name = $wpdb->prefix . 'shipping_order_logs';
+        $sql .= "CREATE TABLE $table_name (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            order_id mediumint(9) NOT NULL,
+            user_id bigint(20),
+            action varchar(100) NOT NULL,
+            old_value text,
+            new_value text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
             PRIMARY KEY  (id),
-            UNIQUE KEY order_number (order_number)
+            KEY order_id (order_id)
         ) $charset_collate;\n";
 
 

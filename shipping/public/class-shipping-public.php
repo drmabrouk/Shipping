@@ -2008,6 +2008,48 @@ class Shipping_Public {
         else wp_send_json_error('Failed to add order');
     }
 
+    public function ajax_get_orders() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        $args = [
+            'status' => sanitize_text_field($_GET['status'] ?? ''),
+            'customer_id' => intval($_GET['customer_id'] ?? 0),
+            'search' => sanitize_text_field($_GET['search'] ?? '')
+        ];
+        wp_send_json_success(Shipping_DB::get_orders($args));
+    }
+
+    public function ajax_update_order() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_order_action', 'nonce');
+        $id = intval($_POST['id']);
+        if (Shipping_DB::update_order($id, $_POST)) wp_send_json_success('Updated');
+        else wp_send_json_error('Failed to update order');
+    }
+
+    public function ajax_delete_order() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_order_action', 'nonce');
+        if (Shipping_DB::delete_order(intval($_POST['id']))) wp_send_json_success('Deleted');
+        else wp_send_json_error('Failed to delete order');
+    }
+
+    public function ajax_get_order_logs() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        wp_send_json_success(Shipping_DB::get_order_logs(intval($_GET['id'])));
+    }
+
+    public function ajax_bulk_update_orders() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_order_action', 'nonce');
+        $ids = explode(',', $_POST['ids']);
+        $status = sanitize_text_field($_POST['status']);
+        $count = 0;
+        foreach ($ids as $id) {
+            if (Shipping_DB::update_order(intval($id), ['status' => $status])) $count++;
+        }
+        wp_send_json_success($count);
+    }
+
     public function ajax_add_route() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         check_ajax_referer('shipping_logistic_action', 'nonce');
