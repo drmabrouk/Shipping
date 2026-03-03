@@ -932,6 +932,11 @@ class Shipping_Activator {
                 'content' => '[shipping_blog]',
                 'shortcode' => 'shipping_blog'
             ),
+            'track-shipment' => array(
+                'title' => 'تتبع الشحنات',
+                'content' => '[shipping_public_tracking]',
+                'shortcode' => 'shipping_public_tracking'
+            ),
             'shipping-register' => array(
                 'title' => 'إنشاء حساب جديد',
                 'content' => '[shipping_register]',

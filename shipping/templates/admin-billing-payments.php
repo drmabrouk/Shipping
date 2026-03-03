@@ -12,7 +12,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
 <!-- 2. Payment Records -->
 <div id="billing-records" class="shipping-internal-tab" style="display: <?php echo $sub == 'records' ? 'block' : 'none'; ?>;">
     <?php
-    $payments = $wpdb->get_results("SELECT p.*, i.invoice_number, c.name as customer_name FROM {$wpdb->prefix}shipping_payments p JOIN {$wpdb->prefix}shipping_invoices i ON p.invoice_id = i.id JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id ORDER BY p.payment_date DESC");
+    $payments = $wpdb->get_results("SELECT p.*, i.invoice_number, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_payments p JOIN {$wpdb->prefix}shipping_invoices i ON p.invoice_id = i.id JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id ORDER BY p.payment_date DESC");
     ?>
     <div class="shipping-card">
         <h4>💳 سجل المدفوعات والتحويلات</h4>
@@ -62,7 +62,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                         <select name="customer_id" id="invoice-customer-id" class="shipping-select" required>
                             <option value="">اختر العميل...</option>
                             <?php
-                            $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers");
+                            $customers = $wpdb->get_results("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers");
                             foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
                             ?>
                         </select>

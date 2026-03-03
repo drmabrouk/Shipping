@@ -5,104 +5,140 @@ $is_officer = current_user_can('manage_options');
 ?>
 
 <?php if ($is_officer): ?>
-<div class="shipping-grid" style="display: grid; grid-template-columns: 1.5fr 3fr; gap: 25px; margin-bottom: 30px;">
-    <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
-        <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">إجمالي العملاء</div>
-        <div style="font-size: 2.5em; font-weight: 900; color: var(--shipping-primary-color);"><?php echo esc_html($stats['total_customers'] ?? 0); ?></div>
+<div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #eee; overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
+    <button class="shipping-tab-btn shipping-active" onclick="shippingOpenInternalTab('dashboard-overview', this)">📊 نظرة عامة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-active', this)">📦 شحنات نشطة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-delivered', this)">✅ شحنات مسلمة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-delayed', this)">⚠️ شحنات متأخرة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-ops', this)">⚙️ حالة العمليات</button>
+</div>
+
+<div id="dashboard-overview" class="shipping-internal-tab">
+    <div class="shipping-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; margin-bottom: 30px;">
+        <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
+            <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">إجمالي العملاء</div>
+            <div style="font-size: 2.5em; font-weight: 900; color: var(--shipping-primary-color);"><?php echo esc_html($stats['total_customers'] ?? 0); ?></div>
+        </div>
+        <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
+            <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">شحنات نشطة</div>
+            <div style="font-size: 2.5em; font-weight: 900; color: var(--shipping-secondary-color);"><?php echo esc_html($stats['active_shipments'] ?? 0); ?></div>
+        </div>
+        <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
+            <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">طلبات جديدة</div>
+            <div style="font-size: 2.5em; font-weight: 900; color: #2ecc71;"><?php echo esc_html($stats['new_orders'] ?? 0); ?></div>
+        </div>
+        <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
+            <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">إجمالي الإيرادات</div>
+            <div style="font-size: 1.8em; font-weight: 900; color: #27ae60; margin-top: 10px;"><?php echo number_format($stats['total_revenue'] ?? 0, 0); ?> <span style="font-size: 0.4em;">SAR</span></div>
+        </div>
     </div>
-    <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
-        <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">شحنات نشطة</div>
-        <div style="font-size: 2.5em; font-weight: 900; color: var(--shipping-secondary-color);"><?php echo esc_html($stats['active_shipments'] ?? 0); ?></div>
-    </div>
-    <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
-        <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">طلبات جديدة</div>
-        <div style="font-size: 2.5em; font-weight: 900; color: #2ecc71;"><?php echo esc_html($stats['new_orders'] ?? 0); ?></div>
-    </div>
-    <div class="shipping-stat-card" style="background: white; padding: 25px; border-radius: 15px; border: 1px solid var(--shipping-border-color); box-shadow: var(--shipping-shadow); text-align: center;">
-        <div style="font-size: 0.85em; color: #64748b; margin-bottom: 10px; font-weight: 700;">إجمالي الإيرادات</div>
-        <div style="font-size: 1.8em; font-weight: 900; color: #27ae60; margin-top: 10px;"><?php echo number_format($stats['total_revenue'] ?? 0, 0); ?> <span style="font-size: 0.4em;">SAR</span></div>
+
+    <div class="shipping-grid" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px;">
+        <div class="shipping-card">
+            <h4>توزيع حالات الشحن</h4>
+            <div style="height: 300px;"><canvas id="shipmentStatusChart"></canvas></div>
+        </div>
+        <div class="shipping-card">
+            <h4>توجه الإيرادات (آخر 7 أيام)</h4>
+            <div style="height: 300px;"><canvas id="revenueTrendChart"></canvas></div>
+        </div>
     </div>
 </div>
 
-<?php endif; ?>
-
-<?php if ($is_officer): ?>
-<div id="activity-logs" style="margin-top: 30px;">
-    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:15px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <div>
-                <h4 style="margin:0; font-size:16px;">سجل نشاطات النظام الشامل</h4>
-                <div style="font-size:11px; color:#718096;">آخر 200 نشاط مسجل في النظام.</div>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <form method="get" style="display:flex; gap:5px;">
-                    <input type="hidden" name="shipping_tab" value="summary">
-                    <input type="text" name="log_search" value="<?php echo esc_attr($_GET['log_search'] ?? ''); ?>" placeholder="بحث في السجلات..." class="shipping-input" style="width:200px; padding:5px 10px; font-size:12px;">
-                    <button type="submit" class="shipping-btn" style="width:auto; padding:5px 15px; font-size:12px;">بحث</button>
-                </form>
-                <button onclick="shippingDeleteAllLogs()" class="shipping-btn" style="background:#e53e3e; width:auto; font-size:12px; padding:5px 15px;">تفريغ السجل</button>
-            </div>
-        </div>
-        <div class="shipping-table-container" style="margin:0; overflow-x:auto;">
-            <table class="shipping-table" style="font-size:12px; width:100%;">
-                <thead>
-                    <tr style="background:#f8fafc;">
-                        <th style="padding:8px; width:140px;">الوقت</th>
-                        <th style="padding:8px; width:120px;">المستخدم</th>
-                        <th style="padding:8px; width:120px;">الإجراء</th>
-                        <th style="padding:8px;">التفاصيل</th>
-                        <th style="padding:8px; width:100px;">إجراءات</th>
-                    </tr>
-                </thead>
+<div id="dashboard-active" class="shipping-internal-tab" style="display: none;">
+    <?php
+    $active_shipments = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.status != 'delivered' AND s.is_archived = 0");
+    ?>
+    <div class="shipping-card">
+        <h4 style="margin-bottom: 20px;">الشحنات النشطة حالياً</h4>
+        <div class="shipping-table-container">
+            <table class="shipping-table">
+                <thead><tr><th>رقم الشحنة</th><th>العميل</th><th>المسار</th><th>الحالة</th></tr></thead>
                 <tbody>
-                    <?php
-                    $limit = 25;
-                    $page_num = isset($_GET['log_page']) ? max(1, intval($_GET['log_page'])) : 1;
-                    $offset = ($page_num - 1) * $limit;
-                    $search = sanitize_text_field($_GET['log_search'] ?? '');
-                    $all_logs = Shipping_Logger::get_logs($limit, $offset, $search);
-                    $total_logs = Shipping_Logger::get_total_logs($search);
-                    $total_pages = ceil($total_logs / $limit);
-
-                    if (empty($all_logs)): ?>
-                        <tr><td colspan="5" style="text-align:center; padding:20px; color:#94a3b8;">لا توجد سجلات تطابق البحث</td></tr>
-                    <?php endif;
-
-                    $appearance = Shipping_Settings::get_appearance();
-                    foreach ($all_logs as $log):
-                        $can_rollback = strpos($log->details, 'ROLLBACK_DATA:') === 0;
-                        $details_display = $can_rollback ? 'عملية تتضمن بيانات للاستعادة' : esc_html($log->details);
-                    ?>
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding:6px 8px; color: #718096;"><?php echo esc_html($log->created_at); ?></td>
-                            <td style="padding:6px 8px; font-weight: 600;"><?php echo esc_html($log->display_name ?: 'نظام'); ?></td>
-                            <td style="padding:6px 8px;"><span style="background:<?php echo $appearance['primary_color']; ?>15; color:<?php echo $appearance['primary_color']; ?>; padding:2px 6px; border-radius:4px; font-weight:700;"><?php echo esc_html($log->action); ?></span></td>
-                            <td style="padding:6px 8px; color:#4a5568; line-height:1.4;"><?php echo mb_strimwidth($details_display, 0, 100, "..."); ?></td>
-                            <td style="padding:6px 8px;">
-                                <div style="display:flex; gap:5px;">
-                                    <button onclick='shippingViewLogDetails(<?php echo json_encode($log); ?>)' class="shipping-btn shipping-btn-outline" style="padding:2px 8px; font-size:10px;">التفاصيل</button>
-                                    <?php if ($can_rollback): ?>
-                                        <button onclick="shippingRollbackLog(<?php echo $log->id; ?>)" class="shipping-btn" style="padding:2px 8px; font-size:10px; background:#38a169;">استعادة</button>
-                                    <?php endif; ?>
-                                    <button onclick="shippingDeleteLog(<?php echo $log->id; ?>)" class="shipping-btn" style="padding:2px 8px; font-size:10px; background:#e53e3e;">حذف</button>
-                                </div>
-                            </td>
+                    <?php if(empty($active_shipments)): ?>
+                        <tr><td colspan="4" style="text-align:center; padding:20px;">لا توجد بيانات متاحة حالياً.</td></tr>
+                    <?php else: foreach($active_shipments as $shp): ?>
+                        <tr>
+                            <td><strong><?php echo $shp->shipment_number; ?></strong></td>
+                            <td><?php echo esc_html($shp->customer_name); ?></td>
+                            <td><?php echo esc_html($shp->origin . ' → ' . $shp->destination); ?></td>
+                            <td><span class="shipping-badge"><?php echo $shp->status; ?></span></td>
                         </tr>
-                    <?php endforeach; ?>
+                    <?php endforeach; endif; ?>
                 </tbody>
             </table>
         </div>
-        <?php if ($total_pages > 1): ?>
-            <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
-                <?php if ($page_num > 1): ?>
-                    <a href="<?php echo add_query_arg('log_page', $page_num - 1); ?>" class="shipping-btn shipping-btn-outline" style="width:auto; padding:5px 15px; text-decoration:none;">السابق</a>
-                <?php endif; ?>
-                <span style="align-self:center; font-size:13px;">صفحة <?php echo $page_num; ?> من <?php echo $total_pages; ?></span>
-                <?php if ($page_num < $total_pages): ?>
-                    <a href="<?php echo add_query_arg('log_page', $page_num + 1); ?>" class="shipping-btn shipping-btn-outline" style="width:auto; padding:5px 15px; text-decoration:none;">التالي</a>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
+    </div>
+</div>
+
+<div id="dashboard-delivered" class="shipping-internal-tab" style="display: none;">
+    <?php
+    $delivered_shipments = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.status = 'delivered' ORDER BY s.delivery_date DESC LIMIT 50");
+    ?>
+    <div class="shipping-card">
+        <h4 style="margin-bottom: 20px;">الشحنات المسلمة مؤخراً</h4>
+        <div class="shipping-table-container">
+            <table class="shipping-table">
+                <thead><tr><th>رقم الشحنة</th><th>العميل</th><th>تاريخ التسليم</th></tr></thead>
+                <tbody>
+                    <?php if(empty($delivered_shipments)): ?>
+                        <tr><td colspan="3" style="text-align:center; padding:20px;">لا توجد شحنات مسلمة مسجلة.</td></tr>
+                    <?php else: foreach($delivered_shipments as $shp): ?>
+                        <tr>
+                            <td><strong><?php echo $shp->shipment_number; ?></strong></td>
+                            <td><?php echo esc_html($shp->customer_name); ?></td>
+                            <td><?php echo date('Y-m-d', strtotime($shp->delivery_date)); ?></td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="dashboard-delayed" class="shipping-internal-tab" style="display: none;">
+    <?php
+    $delayed_shipments = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.status != 'delivered' AND s.delivery_date < %s", current_time('mysql')));
+    ?>
+    <div class="shipping-card" style="border-right: 5px solid #e53e3e;">
+        <h4 style="color:#e53e3e; margin-bottom: 20px;">تنبيه الشحنات المتأخرة</h4>
+        <div class="shipping-table-container">
+            <table class="shipping-table">
+                <thead><tr><th>رقم الشحنة</th><th>العميل</th><th>الموعد الفائت</th><th>الحالة</th></tr></thead>
+                <tbody>
+                    <?php if(empty($delayed_shipments)): ?>
+                        <tr><td colspan="4" style="text-align:center; padding:20px;">لا توجد شحنات متأخرة حالياً.</td></tr>
+                    <?php else: foreach($delayed_shipments as $shp): ?>
+                        <tr>
+                            <td><strong><?php echo $shp->shipment_number; ?></strong></td>
+                            <td><?php echo esc_html($shp->customer_name); ?></td>
+                            <td style="color:#e53e3e;"><?php echo date('Y-m-d', strtotime($shp->delivery_date)); ?></td>
+                            <td><span class="shipping-badge" style="background:#fff5f5; color:#c53030;"><?php echo $shp->status; ?></span></td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="dashboard-ops" class="shipping-internal-tab" style="display: none;">
+    <div class="shipping-card">
+        <h4 style="margin-bottom: 20px;">📊 حالة العمليات المباشرة</h4>
+        <?php
+        $status_counts = $wpdb->get_results("SELECT status, COUNT(*) as count FROM {$wpdb->prefix}shipping_shipments WHERE is_archived = 0 GROUP BY status");
+        ?>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+            <?php foreach ($status_counts as $sc): ?>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 13px; color: #64748b; margin-bottom: 5px;"><?php echo strtoupper($sc->status); ?></div>
+                    <div style="font-size: 24px; font-weight: 800; color: var(--shipping-primary-color);"><?php echo $sc->count; ?></div>
+                </div>
+            <?php endforeach; ?>
+            <?php if (empty($status_counts)): ?>
+                <p style="text-align: center; color: #94a3b8; padding: 20px;">لا توجد عمليات جارية حالياً.</p>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 <?php endif; ?>
@@ -147,7 +183,7 @@ function shippingDownloadChart(chartId, fileName) {
             data: {
                 labels: ['نشطة', 'مسلمة', 'متأخرة', 'معلقة'],
                 datasets: [{
-                    data: [<?php echo $stats['active_shipments']; ?>, <?php echo $stats['delivered_shipments']; ?>, <?php echo $stats['delayed_shipments']; ?>, <?php echo $stats['new_orders']; ?>],
+                    data: [<?php echo (int)($stats['active_shipments'] ?? 0); ?>, <?php echo (int)($stats['delivered_shipments'] ?? 0); ?>, <?php echo (int)($stats['delayed_shipments'] ?? 0); ?>, <?php echo (int)($stats['new_orders'] ?? 0); ?>],
                     backgroundColor: ['#4299E1', '#48BB78', '#F56565', '#ECC94B']
                 }]
             },

@@ -76,7 +76,7 @@ foreach($statuses as $status => $id): ?>
                         <select name="customer_id" class="shipping-input" required>
                             <option value="">اختر العميل...</option>
                             <?php
-                            $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers ORDER BY name ASC");
+                            $customers = $wpdb->get_results("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers ORDER BY first_name ASC");
                             foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
                             ?>
                         </select>
@@ -121,7 +121,7 @@ foreach($statuses as $status => $id): ?>
                         <label>العميل</label>
                         <select name="customer_id" class="shipping-input" required>
                             <?php
-                            $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers ORDER BY name ASC");
+                            $customers = $wpdb->get_results("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers ORDER BY first_name ASC");
                             foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
                             ?>
                         </select>
