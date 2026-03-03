@@ -3,10 +3,10 @@ $sub = $_GET['sub'] ?? 'documentation';
 ?>
 <div class="shipping-admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <div class="shipping-tabs-wrapper" style="display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 5px;">
-        <button class="shipping-tab-btn <?php echo $sub == 'documentation' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-docs', this); loadCustomsDocs()">📄 الوثائق والمستندات</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'invoices' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-invoices', this); loadCustomsInvoices()">📑 الفواتير التجارية</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'duties-taxes' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-taxes', this)">💰 الرسوم والضرائب</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'status' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-status', this); loadCustomsStatus()">⚖️ حالة التخليص</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'documentation' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-docs', this); loadCustomsDocs()">الوثائق والمستندات</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'invoices' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-invoices', this); loadCustomsInvoices()">الفواتير التجارية</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'duties-taxes' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-taxes', this)">الرسوم والضرائب</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'status' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-status', this); loadCustomsStatus()">حالة التخليص</button>
     </div>
     <div style="display: flex; gap: 10px;">
         <button class="shipping-btn" onclick="document.getElementById('modal-add-customs').style.display='flex'">+ بيان جمركي</button>
@@ -16,7 +16,7 @@ $sub = $_GET['sub'] ?? 'documentation';
 
 <div id="customs-invoices" class="shipping-internal-tab" style="display: <?php echo $sub == 'invoices' ? 'block' : 'none'; ?>;">
     <div class="shipping-card">
-        <h4>📑 الفواتير التجارية المصاحبة للشحنات</h4>
+        <h4>الفواتير التجارية المصاحبة للشحنات</h4>
         <div class="shipping-table-container">
             <table class="shipping-table">
                 <thead>
@@ -38,7 +38,7 @@ $sub = $_GET['sub'] ?? 'documentation';
 
 <div id="customs-docs" class="shipping-internal-tab" style="display: <?php echo $sub == 'documentation' ? 'block' : 'none'; ?>;">
     <div class="shipping-card">
-        <h4>📦 وثائق التخليص الجمركي للشحنات</h4>
+        <h4>وثائق التخليص الجمركي للشحنات</h4>
         <div class="shipping-table-container">
             <table class="shipping-table">
                 <thead>
@@ -61,10 +61,10 @@ $sub = $_GET['sub'] ?? 'documentation';
 <div id="customs-taxes" class="shipping-internal-tab" style="display: <?php echo $sub == 'duties-taxes' ? 'block' : 'none'; ?>;">
     <div class="shipping-grid" style="grid-template-columns: 2fr 1fr;">
         <div class="shipping-card">
-            <h4>💰 تقدير الرسوم الجمركية والضرائب</h4>
+            <h4>تقدير الرسوم الجمركية والضرائب</h4>
             <form id="form-tax-calculator" style="margin-top: 20px;">
                 <div class="shipping-form-group">
-                    <label>القيمة المصرح بها للبضاعة (SAR)</label>
+                    <label>القيمة المصرح بها للبضاعة (<?php echo esc_html($currency); ?>)</label>
                     <input type="number" id="goods-value" class="shipping-input" placeholder="0.00">
                 </div>
                 <div class="shipping-form-group">
@@ -85,12 +85,12 @@ $sub = $_GET['sub'] ?? 'documentation';
             </form>
         </div>
         <div class="shipping-card" id="tax-result-card" style="display: none; background: #fffaf0; border: 1px solid #feebc8;">
-            <h4>📊 ملخص التقدير</h4>
+            <h4>ملخص التقدير</h4>
             <div style="display: grid; gap: 15px; margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between;"><span>الرسوم الجمركية:</span><strong id="res-duties">0.00 SAR</strong></div>
-                <div style="display: flex; justify-content: space-between;"><span>ضريبة القيمة المضافة (15%):</span><strong id="res-vat">0.00 SAR</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>الرسوم الجمركية:</span><strong id="res-duties">0.00 <?php echo esc_html($currency); ?></strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>ضريبة القيمة المضافة (15%):</span><strong id="res-vat">0.00 <?php echo esc_html($currency); ?></strong></div>
                 <div style="display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 10px; font-size: 1.2em; color: #c05621;">
-                    <span>إجمالي التقدير:</span><strong id="res-total-tax">0.00 SAR</strong>
+                    <span>إجمالي التقدير:</span><strong id="res-total-tax">0.00 <?php echo esc_html($currency); ?></strong>
                 </div>
             </div>
         </div>
@@ -99,7 +99,7 @@ $sub = $_GET['sub'] ?? 'documentation';
 
 <div id="customs-status" class="shipping-internal-tab" style="display: <?php echo $sub == 'status' ? 'block' : 'none'; ?>;">
     <div class="shipping-card">
-        <h4>⚖️ متابعة طلبات التخليص الجاري</h4>
+        <h4>متابعة طلبات التخليص الجاري</h4>
         <div class="shipping-table-container">
             <table class="shipping-table">
                 <thead>
@@ -145,7 +145,7 @@ $sub = $_GET['sub'] ?? 'documentation';
                     </select>
                 </div>
                 <div class="shipping-form-group">
-                    <label>الرسوم الجمركية المقدرة (SAR)</label>
+                    <label>الرسوم الجمركية المقدرة (<?php echo esc_html($currency); ?>)</label>
                     <input type="number" step="0.01" name="duties_amount" class="shipping-input" required>
                 </div>
                 <div class="shipping-form-group">
@@ -213,9 +213,9 @@ function calculateCustomsTax() {
     const vat = (val + duties) * 0.15;
     const total = duties + vat;
 
-    document.getElementById('res-duties').innerText = duties.toFixed(2) + ' SAR';
-    document.getElementById('res-vat').innerText = vat.toFixed(2) + ' SAR';
-    document.getElementById('res-total-tax').innerText = total.toFixed(2) + ' SAR';
+    document.getElementById('res-duties').innerText = duties.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
+    document.getElementById('res-vat').innerText = vat.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
+    document.getElementById('res-total-tax').innerText = total.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
     document.getElementById('tax-result-card').style.display = 'block';
 }
 
@@ -273,7 +273,7 @@ function loadCustomsStatus() {
             <tr>
                 <td><strong>${c.shipment_number}</strong></td>
                 <td>${c.documentation_status}</td>
-                <td>${parseFloat(c.duties_amount).toFixed(2)} SAR</td>
+                <td>${parseFloat(c.duties_amount).toFixed(2)} <?php echo esc_js($currency); ?></td>
                 <td><span class="shipping-badge">${c.clearance_status}</span></td>
             </tr>
         `).join('');

@@ -35,8 +35,7 @@ class Shipping_Settings {
             'tab_order_mgmt' => 'إدارة الطلبات',
             'tab_tracking_logistics' => 'التتبع واللوجستيات',
             'tab_customs_clearance' => 'التخليص الجمركي',
-            'tab_billing_payments' => 'الفواتير والمدفوعات',
-            'tab_pricing_costs' => 'التسعير والتكاليف'
+            'tab_billing_payments' => 'الفواتير والمدفوعات'
         );
         return wp_parse_args(get_option('shipping_labels', array()), $default);
     }
@@ -73,7 +72,8 @@ class Shipping_Settings {
             'phone' => '0123456789',
             'website_url' => '',
             'map_link' => '',
-            'extra_details' => ''
+            'extra_details' => '',
+            'currency' => 'SAR'
         );
         return get_option('shipping_info', $default);
     }

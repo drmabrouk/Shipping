@@ -4,10 +4,10 @@ $sub = $_GET['sub'] ?? 'new-orders';
 ?>
 <div class="shipping-admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <div class="shipping-tabs-wrapper" style="display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 5px;">
-        <button class="shipping-tab-btn <?php echo $sub == 'new-orders' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-new', this); loadOrders('new')">🆕 طلبات جديدة</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'in-progress' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-progress', this); loadOrders('in-progress')">🚚 قيد التنفيذ</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'completed' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-completed', this); loadOrders('completed')">✅ مكتملة</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'cancelled' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-cancelled', this); loadOrders('cancelled')">🚫 ملغاة</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'new-orders' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-new', this); loadOrders('new')">طلبات جديدة</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'in-progress' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-progress', this); loadOrders('in-progress')">قيد التنفيذ</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'completed' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-completed', this); loadOrders('completed')">مكتملة</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'cancelled' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-cancelled', this); loadOrders('cancelled')">ملغاة</button>
     </div>
     <div style="display: flex; gap: 10px;">
         <div class="shipping-search-box" style="position: relative;">
@@ -82,7 +82,7 @@ foreach($statuses as $status => $id): ?>
                         </select>
                     </div>
                     <div class="shipping-form-group">
-                        <label>المبلغ الإجمالي (SAR)</label>
+                        <label>المبلغ الإجمالي (<?php echo esc_html($currency); ?>)</label>
                         <input type="number" step="0.01" name="total_amount" class="shipping-input" placeholder="0.00" required>
                     </div>
                 </div>
@@ -127,7 +127,7 @@ foreach($statuses as $status => $id): ?>
                         </select>
                     </div>
                     <div class="shipping-form-group">
-                        <label>المبلغ الإجمالي (SAR)</label>
+                        <label>المبلغ الإجمالي (<?php echo esc_html($currency); ?>)</label>
                         <input type="number" step="0.01" name="total_amount" class="shipping-input" required>
                     </div>
                 </div>
@@ -190,22 +190,22 @@ function loadOrders(status = currentStatus) {
                     <div style="font-weight:700;">${o.customer_name}</div>
                     <div style="font-size:11px; color:#718096;">${o.customer_phone}</div>
                 </td>
-                <td>${parseFloat(o.total_amount).toFixed(2)} SAR</td>
+                <td>${parseFloat(o.total_amount).toFixed(2)} <?php echo esc_js($currency); ?></td>
                 <td style="font-size:12px; max-width:200px;">
-                    <div class="truncate" title="${o.pickup_address}">📍 ${o.pickup_address}</div>
-                    <div class="truncate" title="${o.delivery_address}">🏁 ${o.delivery_address}</div>
+                    <div class="truncate" title="${o.pickup_address}">من: ${o.pickup_address}</div>
+                    <div class="truncate" title="${o.delivery_address}">إلى: ${o.delivery_address}</div>
                 </td>
                 <td>${o.created_at.split(' ')[0]}</td>
                 <td>
                     <div style="display:flex; gap:5px;">
-                        <button class="shipping-btn-icon" title="سجل الطلب" onclick="viewOrderLogs(${o.id}, '${o.order_number}')">📜</button>
-                        <button class="shipping-btn-icon" title="تعديل الطلب" onclick='openEditOrderModal(${JSON.stringify(o).replace(/"/g, '&quot;')})'>✏️</button>
-                        ${o.shipment_id ? `<button class="shipping-btn-icon" title="ملف الشحنة" style="background:#319795; color:#fff;" onclick="viewShipmentDossier(${o.shipment_id})">📂</button>` : ''}
-                        ${o.status === 'new' ? `<button class="shipping-btn-icon" title="تجهيز الشحن" style="background:#3182ce; color:#fff;" onclick="prepareShipment(${o.id})">📦</button>` : ''}
+                        <button class="shipping-btn" style="padding:4px 8px; font-size:11px;" onclick="viewOrderLogs(${o.id}, '${o.order_number}')">سجل</button>
+                        <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#4a5568;" onclick='openEditOrderModal(${JSON.stringify(o).replace(/"/g, '&quot;')})'>تعديل</button>
+                        ${o.shipment_id ? `<button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#319795;" onclick="viewShipmentDossier(${o.shipment_id})">ملف</button>` : ''}
+                        ${o.status === 'new' ? `<button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#3182ce;" onclick="prepareShipment(${o.id})">شحن</button>` : ''}
                         ${o.status !== 'completed' && o.status !== 'cancelled' ? `
-                            <button class="shipping-btn-icon" title="تحديث الحالة" style="background:#38a169; color:#fff;" onclick="updateOrderStatus(${o.id}, '${getNextStatus(o.status)}')">⏭️</button>
+                            <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#38a169;" onclick="updateOrderStatus(${o.id}, '${getNextStatus(o.status)}')">تحديث</button>
                         ` : ''}
-                        <button class="shipping-btn-icon" title="حذف" style="background:#e53e3e; color:#fff;" onclick="deleteOrder(${o.id})">🗑️</button>
+                        <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#e53e3e;" onclick="deleteOrder(${o.id})">حذف</button>
                     </div>
                 </td>
             </tr>

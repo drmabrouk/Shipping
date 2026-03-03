@@ -345,7 +345,7 @@ $sub = $_GET['sub'] ?? 'live-tracking';
             <h5>تكاليف صيانة الأسطول</h5>
             <div style="text-align: center; padding: 40px 0;">
                 <div style="font-size: 14px; color: #666;">إجمالي التكاليف المسجلة</div>
-                <div style="font-size: 32px; font-weight: 800; color: var(--shipping-primary-color);" id="total-maintenance-cost">0.00 SAR</div>
+                <div style="font-size: 32px; font-weight: 800; color: var(--shipping-primary-color);" id="total-maintenance-cost">0.00 <?php echo esc_html($currency); ?></div>
             </div>
         </div>
     </div>
@@ -386,8 +386,8 @@ $sub = $_GET['sub'] ?? 'live-tracking';
 
     <div id="vehicle-details-section" style="display: none; margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
         <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; border-bottom: 1px solid #eee; margin-bottom: 20px;">
-            <button class="shipping-tab-btn shipping-active" onclick="shippingOpenVehicleSubTab('maintenance', this)">🛠️ سجل الصيانة</button>
-            <button class="shipping-tab-btn" onclick="shippingOpenVehicleSubTab('shipments', this)">📦 الشحنات المرتبطة</button>
+            <button class="shipping-tab-btn shipping-active" onclick="shippingOpenVehicleSubTab('maintenance', this)">سجل الصيانة</button>
+            <button class="shipping-tab-btn" onclick="shippingOpenVehicleSubTab('shipments', this)">الشحنات المرتبطة</button>
         </div>
 
         <div id="vehicle-maintenance-tab" class="vehicle-sub-tab">
@@ -414,7 +414,7 @@ $sub = $_GET['sub'] ?? 'live-tracking';
         </div>
 
         <div id="vehicle-shipments-tab" class="vehicle-sub-tab" style="display:none;">
-            <h4>📦 الشحنات النشطة لهذه المركبة</h4>
+            <h4>الشحنات النشطة لهذه المركبة</h4>
             <div class="shipping-table-container">
                 <table class="shipping-table">
                     <thead>
@@ -928,7 +928,7 @@ $sub = $_GET['sub'] ?? 'live-tracking';
         .then(res => {
             if (res.success) {
                 const data = res.data;
-                document.getElementById('total-maintenance-cost').innerText = (data.total_maintenance_cost || 0) + ' SAR';
+                document.getElementById('total-maintenance-cost').innerText = (data.total_maintenance_cost || 0).toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
 
                 // Shipment Status Chart
                 renderChart('shipment-status', 'pie', {
@@ -1102,7 +1102,7 @@ $sub = $_GET['sub'] ?? 'live-tracking';
                     <tr>
                         <td>${m.maintenance_type}</td>
                         <td>${m.maintenance_date}</td>
-                        <td>${m.cost} SAR</td>
+                        <td>${parseFloat(m.cost).toFixed(2)} <?php echo esc_js($currency); ?></td>
                         <td><span class="shipping-badge ${m.completed == 1 ? 'shipping-badge-high' : 'shipping-badge-medium'}">${m.completed == 1 ? 'مكتملة' : 'قيد الانتظار'}</span></td>
                         <td>
                             <button class="shipping-btn-outline" onclick='shippingOpenMaintenanceModal(${JSON.stringify(m).replace(/"/g, '&quot;')})' style="padding:4px 8px; font-size:10px;">تعديل</button>

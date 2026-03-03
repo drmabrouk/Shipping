@@ -1334,30 +1334,6 @@ class Shipping_DB {
         return $wpdb->delete($wpdb->prefix . 'shipping_additional_fees', array('id' => $id));
     }
 
-    // Special Offers
-    public static function add_special_offer($data) {
-        global $wpdb;
-        return $wpdb->insert($wpdb->prefix . 'shipping_special_offers', array(
-            'offer_name' => sanitize_text_field($data['offer_name'] ?? $data['offer_code']),
-            'promo_code' => sanitize_text_field($data['promo_code'] ?? $data['offer_code'] ?? ''),
-            'discount_type' => sanitize_text_field($data['discount_type']),
-            'discount_value' => floatval($data['discount_value']),
-            'start_date' => $data['start_date'] ?? date('Y-m-d'),
-            'end_date' => $data['end_date'] ?? $data['expiry_date'] ?? null,
-            'is_active' => 1
-        ));
-    }
-
-    public static function get_special_offers() {
-        global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}shipping_special_offers ORDER BY id DESC");
-    }
-
-    public static function delete_special_offer($id) {
-        global $wpdb;
-        return $wpdb->delete($wpdb->prefix . 'shipping_special_offers', array('id' => $id));
-    }
-
     // Advanced Cost Estimation Logic
     public static function estimate_shipment_cost($data) {
         global $wpdb;
@@ -1403,20 +1379,9 @@ class Shipping_DB {
         if ($is_urgent) $total_fees += ($rule->base_price * 0.5); // 50% extra for urgency
         if ($is_insured) $total_fees += ($rule->base_price * 0.1); // 10% extra for insurance
 
-        // 3. Apply Special Offers / Promo Code
+        // 3. Final Calculation
         $total_before_discount = $rule->base_price + $calc_weight_cost + $calc_distance_cost + $total_fees;
         $discount = 0;
-        $promo = $data['promo_code'] ?? $data['offer_code'] ?? '';
-
-        if (!empty($promo)) {
-            $offer = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}shipping_special_offers WHERE promo_code = %s AND is_active = 1 AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE())",
-                $promo
-            ));
-            if ($offer) {
-                $discount = ($offer->discount_type === 'percentage') ? ($total_before_discount * ($offer->discount_value / 100)) : $offer->discount_value;
-            }
-        }
 
         $final_total = max(0, $total_before_discount - $discount);
 

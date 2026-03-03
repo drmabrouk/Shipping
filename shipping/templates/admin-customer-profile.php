@@ -16,7 +16,7 @@ $is_subscriber = in_array('subscriber', (array)$user->roles);
 // IDOR CHECK: Restricted users can only see their own profile
 if ($is_subscriber && !current_user_can('manage_options')) {
     if ($customer->wp_user_id != $user->ID) {
-        echo '<div class="error" style="padding:20px; background:#fff5f5; color:#c53030; border-radius:8px; border:1px solid #feb2b2;"><h4>⚠️ عذراً، لا تملك صلاحية الوصول لهذا الملف.</h4><p>لا يمكنك استعراض بيانات العملاء الآخرين.</p></div>';
+        echo '<div class="error" style="padding:20px; background:#fff5f5; color:#c53030; border-radius:8px; border:1px solid #feb2b2;"><h4>عذراً، لا تملك صلاحية الوصول لهذا الملف.</h4><p>لا يمكنك استعراض بيانات العملاء الآخرين.</p></div>';
         return;
     }
 }
@@ -32,7 +32,7 @@ $statuses = Shipping_Settings::get_account_statuses();
                     <?php if ($customer->photo_url): ?>
                         <img src="<?php echo esc_url($customer->photo_url); ?>" style="width:100%; height:100%; object-fit:cover;">
                     <?php else: ?>
-                        👤
+                        <span class="dashicons dashicons-admin-users" style="font-size: 50px; width: 50px; height: 50px; color: #cbd5e0;"></span>
                     <?php endif; ?>
                 </div>
                 <button onclick="shippingTriggerPhotoUpload()" style="position: absolute; bottom: 0; right: 0; background: var(--shipping-primary-color); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
@@ -60,8 +60,8 @@ $statuses = Shipping_Settings::get_account_statuses();
 
     <!-- Profile Tabs -->
     <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-        <button class="shipping-tab-btn shipping-active" onclick="shippingOpenInternalTab('profile-info', this)"><span class="dashicons dashicons-admin-users"></span> بيانات الحساب</button>
-        <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('customer-chat', this); setTimeout(() => selectConversation(<?php echo $customer->id; ?>, '<?php echo esc_js($customer->first_name . ' ' . $customer->last_name); ?>', <?php echo $customer->wp_user_id ?: 0; ?>), 100);"><span class="dashicons dashicons-email"></span> المراسلات والشكاوى</button>
+        <button class="shipping-tab-btn shipping-active" onclick="shippingOpenInternalTab('profile-info', this)">بيانات الحساب</button>
+        <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('customer-chat', this); setTimeout(() => selectConversation(<?php echo $customer->id; ?>, '<?php echo esc_js($customer->first_name . ' ' . $customer->last_name); ?>', <?php echo $customer->wp_user_id ?: 0; ?>), 100);">المراسلات والشكاوى</button>
     </div>
 
     <div id="profile-info" class="shipping-internal-tab">

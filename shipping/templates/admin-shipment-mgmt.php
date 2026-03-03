@@ -3,7 +3,7 @@ global $wpdb;
 $sub = $_GET['sub'] ?? 'create-shipment';
 ?>
 <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
-    <button class="shipping-tab-btn <?php echo $sub == 'registry' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-registry', this)">📋 سجل الشحنات</button>
+    <button class="shipping-tab-btn <?php echo $sub == 'registry' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-registry', this)">سجل الشحنات</button>
     <button class="shipping-tab-btn <?php echo $sub == 'tracking' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-tracking', this)">تتبع الشحنات</button>
     <button class="shipping-tab-btn <?php echo $sub == 'monitoring' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-monitoring', this)">مراقبة الحالة</button>
     <button class="shipping-tab-btn <?php echo $sub == 'schedule' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-schedule', this)">جدول الشحن</button>
@@ -54,8 +54,8 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                             <td><span class="pastel-badge status-<?php echo $s->status; ?>"><?php echo $s->status; ?></span></td>
                             <td>
                                 <div style="display:flex; gap:5px;">
-                                    <button class="shipping-btn-icon" title="تتبع" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">📡</button>
-                                    <button class="shipping-btn-icon" title="تفاصيل" onclick="viewFullDossier(<?php echo $s->id; ?>)">📋</button>
+                                    <button class="shipping-btn" style="padding:5px 10px; font-size:11px;" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">تتبع</button>
+                                    <button class="shipping-btn" style="padding:5px 10px; font-size:11px; background:#319795;" onclick="viewFullDossier(<?php echo $s->id; ?>)">تفاصيل</button>
                                 </div>
                             </td>
                         </tr>
@@ -86,8 +86,42 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                             ?>
                         </select>
                     </div>
-                    <div class="shipping-form-group"><label>نقطة الانطلاق:</label><input type="text" name="origin" class="shipping-input" required></div>
-                    <div class="shipping-form-group"><label>نقطة الوصول:</label><input type="text" name="destination" class="shipping-input" required></div>
+                    <div class="shipping-form-group">
+                        <label>دولة الانطلاق:</label>
+                        <select name="origin_country" class="shipping-select origin-country-select" required onchange="shippingUpdateCities(this, 'origin-city-select')">
+                            <option value="">اختر الدولة...</option>
+                            <option value="Saudi Arabia" selected>السعودية</option>
+                            <option value="UAE">الإمارات</option>
+                            <option value="Egypt">مصر</option>
+                            <option value="Oman">عمان</option>
+                            <option value="Qatar">قطر</option>
+                            <option value="Jordan">الأردن</option>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>مدينة الانطلاق:</label>
+                        <select name="origin_city" class="shipping-select origin-city-select" required>
+                            <option value="">اختر المدينة...</option>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>دولة الوصول:</label>
+                        <select name="destination_country" class="shipping-select destination-country-select" required onchange="shippingUpdateCities(this, 'destination-city-select')">
+                            <option value="">اختر الدولة...</option>
+                            <option value="Saudi Arabia" selected>السعودية</option>
+                            <option value="UAE">الإمارات</option>
+                            <option value="Egypt">مصر</option>
+                            <option value="Oman">عمان</option>
+                            <option value="Qatar">قطر</option>
+                            <option value="Jordan">الأردن</option>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>مدينة الوصول:</label>
+                        <select name="destination_city" class="shipping-select destination-city-select" required>
+                            <option value="">اختر المدينة...</option>
+                        </select>
+                    </div>
 
                     <div class="shipping-form-group">
                         <label>الوزن (كجم):</label>
@@ -148,7 +182,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                 </form>
 
                 <div class="shipping-card" id="realtime-cost-card" style="background: #f8fafc; border: 2px solid #e2e8f0; margin: 0;">
-                    <h4 style="margin-top:0; color: #4a5568;">💰 ملخص التكلفة</h4>
+                    <h4 style="margin-top:0; color: #4a5568;">ملخص التكلفة</h4>
                     <div id="cost-loader" style="display: none; text-align: center; padding: 20px;">
                         <span class="dashicons dashicons-update spin" style="font-size: 30px; width: 30px; height: 30px;"></span>
                     </div>
@@ -156,7 +190,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                         <div style="text-align: center; padding: 20px; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e0; margin-bottom: 20px;">
                             <div style="font-size: 0.8em; color: #718096;">التكلفة المتوقعة</div>
                             <div style="font-size: 2em; font-weight: 900; color: var(--shipping-primary-color);" id="display-cost">0.00</div>
-                            <div style="font-weight: 700; color: #4a5568; font-size: 12px;">SAR</div>
+                            <div style="font-weight: 700; color: #4a5568; font-size: 12px;"><?php echo esc_html($currency); ?></div>
                         </div>
                         <div id="cost-breakdown-list" style="font-size: 12px; color: #4a5568;">
                             <p style="text-align: center; opacity: 0.7;">أدخل بيانات الشحنة للحساب.</p>
@@ -254,12 +288,12 @@ $sub = $_GET['sub'] ?? 'create-shipment';
     $deliveries = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(delivery_date) = %s", $today));
     ?>
     <div class="shipping-card">
-        <h4>🗓️ جدول الشحن والمهام لليوم (<?php echo $today; ?>)</h4>
+        <h4>جدول الشحن والمهام لليوم (<?php echo $today; ?>)</h4>
 
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top:20px;">
             <!-- Pickups -->
             <div style="background:#fffaf0; border:1px solid #feebc8; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#dd6b20;">📦 مهام الاستلام (${<?php echo count($pickups); ?>})</h5>
+                <h5 style="margin:0 0 15px 0; color:#dd6b20;">مهام الاستلام (${<?php echo count($pickups); ?>})</h5>
                 <div style="display:grid; gap:10px;">
                     <?php if(empty($pickups)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
                     foreach($pickups as $p): ?>
@@ -273,7 +307,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 
             <!-- Dispatches -->
             <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#3182ce;">🚀 مهام الانطلاق (${<?php echo count($dispatches); ?>})</h5>
+                <h5 style="margin:0 0 15px 0; color:#3182ce;">مهام الانطلاق (${<?php echo count($dispatches); ?>})</h5>
                 <div style="display:grid; gap:10px;">
                     <?php if(empty($dispatches)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
                     foreach($dispatches as $d): ?>
@@ -287,7 +321,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 
             <!-- Deliveries -->
             <div style="background:#f0fff4; border:1px solid #c6f6d5; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#38a169;">🏁 مهام التسليم (${<?php echo count($deliveries); ?>})</h5>
+                <h5 style="margin:0 0 15px 0; color:#38a169;">مهام التسليم (${<?php echo count($deliveries); ?>})</h5>
                 <div style="display:grid; gap:10px;">
                     <?php if(empty($deliveries)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
                     foreach($deliveries as $del): ?>
@@ -359,8 +393,32 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 </div>
 
 <script>
+const arabCities = {
+    "Saudi Arabia": ["الرياض", "جدة", "الدمام", "مكة المكرمة", "المدينة المنورة", "الخبر"],
+    "UAE": ["دبي", "أبو ظبي", "الشارقة", "عجمان", "العين"],
+    "Egypt": ["القاهرة", "الإسكندرية", "الجيزة", "بورسعيد", "المنصورة"],
+    "Oman": ["مسقط", "صلالة", "صحار", "نزوى"],
+    "Qatar": ["الدوحة", "الريان", "الوكرة", "الخور"],
+    "Jordan": ["عمان", "إربد", "الزرقاء", "العقبة"]
+};
+
+function shippingUpdateCities(countrySelect, citySelectClass) {
+    const country = countrySelect.value;
+    const citySelects = document.querySelectorAll('.' + citySelectClass);
+    const cities = arabCities[country] || [];
+
+    citySelects.forEach(select => {
+        select.innerHTML = '<option value="">اختر المدينة...</option>' +
+            cities.map(c => `<option value="${c}">${c}</option>`).join('');
+    });
+}
+
 window.openShipmentCreationModal = function() {
     document.getElementById('modal-create-shipment').style.display = 'flex';
+    // Trigger initial city load for defaults
+    document.querySelectorAll('.origin-country-select, .destination-country-select').forEach(s => {
+        shippingUpdateCities(s, s.name.includes('origin') ? 'origin-city-select' : 'destination-city-select');
+    });
 };
 
 let costTimeout;
@@ -486,7 +544,7 @@ function viewFullDossier(id) {
 
         let html = `
             <div class="shipping-card" style="margin:0;">
-                <h5 style="color:var(--shipping-primary-color); border-bottom:1px solid #eee; padding-bottom:10px;">📦 تفاصيل الشحنة واللوجستيات</h5>
+                <h5 style="color:var(--shipping-primary-color); border-bottom:1px solid #eee; padding-bottom:10px;">تفاصيل الشحنة واللوجستيات</h5>
                 <div style="font-size:13px; display:grid; gap:8px; margin-top:10px;">
                     <div><strong>العميل:</strong> ${d.shipment.customer_name}</div>
                     <div><strong>المسار:</strong> ${d.shipment.route_name || 'غير محدد'}</div>
@@ -501,7 +559,7 @@ function viewFullDossier(id) {
             </div>
 
             <div class="shipping-card" style="margin:0;">
-                <h5 style="color:#3182ce; border-bottom:1px solid #eee; padding-bottom:10px;">🛒 الطلب المرتبط والفواتير</h5>
+                <h5 style="color:#3182ce; border-bottom:1px solid #eee; padding-bottom:10px;">الطلب المرتبط والفواتير</h5>
                 <div style="font-size:13px; display:grid; gap:8px; margin-top:10px;">
                     ${d.order ? `
                         <div><strong>رقم الطلب:</strong> ${d.order.order_number}</div>
@@ -511,7 +569,7 @@ function viewFullDossier(id) {
                     ${d.invoice ? `
                         <div style="margin-top:10px; padding:10px; background:#f0fff4; border-radius:8px;">
                             <strong>الفاتورة:</strong> ${d.invoice.invoice_number}<br>
-                            <strong>المبلغ:</strong> ${parseFloat(d.invoice.total_amount).toFixed(2)} SAR<br>
+                            <strong>المبلغ:</strong> ${parseFloat(d.invoice.total_amount).toFixed(2)} <?php echo esc_js($currency); ?><br>
                             <strong>الحالة:</strong> <span class="shipping-badge">${d.invoice.status}</span>
                         </div>
                     ` : '<div style="color:#718096;">لا توجد فاتورة مصدرة حالياً</div>'}
@@ -519,11 +577,11 @@ function viewFullDossier(id) {
             </div>
 
             <div class="shipping-card" style="margin:0; grid-column: 1 / -1;">
-                <h5 style="color:#805ad5; border-bottom:1px solid #eee; padding-bottom:10px;">⚖️ التخليص الجمركي والوثائق</h5>
+                <h5 style="color:#805ad5; border-bottom:1px solid #eee; padding-bottom:10px;">التخليص الجمركي والوثائق</h5>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:10px;">
                     <div>
                         <div style="font-size:13px; margin-bottom:10px;"><strong>الحالة الجمركية:</strong> ${d.customs ? d.customs.clearance_status : 'لا توجد بيانات'}</div>
-                        <div style="font-size:13px;"><strong>الرسوم:</strong> ${d.customs ? d.customs.duties_amount : '0.00'} SAR</div>
+                        <div style="font-size:13px;"><strong>الرسوم:</strong> ${d.customs ? d.customs.duties_amount : '0.00'} <?php echo esc_js($currency); ?></div>
                     </div>
                     <div>
                         <strong>المستندات المرفوعة:</strong>
@@ -535,7 +593,7 @@ function viewFullDossier(id) {
             </div>
 
             <div class="shipping-card" style="margin:0; grid-column: 1 / -1;">
-                <h5 style="border-bottom:1px solid #eee; padding-bottom:10px;">🕒 سجل التتبع التاريخي</h5>
+                <h5 style="border-bottom:1px solid #eee; padding-bottom:10px;">سجل التتبع التاريخي</h5>
                 <div style="max-height:200px; overflow-y:auto; font-size:12px; margin-top:10px;">
                     ${d.events.length ? d.events.map(ev => `
                         <div style="display:flex; gap:10px; margin-bottom:5px; padding-bottom:5px; border-bottom:1px solid #f8f9fa;">
@@ -585,8 +643,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (f) {
                     document.getElementById('shipment-order-id-input').value = orderId;
                     f.customer_id.value = o.customer_id;
-                    f.origin.value = o.pickup_address;
-                    f.destination.value = o.delivery_address;
+                    // Note: automatic address parsing from textarea to dropdowns omitted for stability
 
                     // Trigger cost calculation if weight is set
                     if (f.weight.value > 0) calculateRealtimeCost();

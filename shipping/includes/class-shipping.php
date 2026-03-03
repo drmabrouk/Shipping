@@ -112,9 +112,6 @@ class Shipping {
         $this->loader->add_action('wp_ajax_shipping_get_additional_fees', $plugin_public, 'ajax_get_additional_fees');
         $this->loader->add_action('wp_ajax_shipping_add_additional_fee', $plugin_public, 'ajax_add_additional_fee');
         $this->loader->add_action('wp_ajax_shipping_delete_additional_fee', $plugin_public, 'ajax_delete_additional_fee');
-        $this->loader->add_action('wp_ajax_shipping_get_special_offers', $plugin_public, 'ajax_get_special_offers');
-        $this->loader->add_action('wp_ajax_shipping_add_special_offer', $plugin_public, 'ajax_add_special_offer');
-        $this->loader->add_action('wp_ajax_shipping_delete_special_offer', $plugin_public, 'ajax_delete_special_offer');
         $this->loader->add_action('wp_ajax_shipping_estimate_cost', $plugin_public, 'ajax_estimate_cost');
         $this->loader->add_action('wp_ajax_shipping_update_profile_ajax', $plugin_public, 'ajax_update_profile');
         $this->loader->add_action('wp_ajax_shipping_print', $plugin_public, 'handle_print');
