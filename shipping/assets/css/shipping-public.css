@@ -593,3 +593,9 @@
     .shipping-info-grid, .shipping-contact-grid { grid-template-columns: 1fr; }
     .shipping-hero-section h1 { font-size: 2em; }
 }
+
+/* State Synchronization Styles */
+.shipping-state-selected {
+    border-right: 5px solid var(--shipping-primary-color) !important;
+    background-color: var(--shipping-pastel-red) !important;
+}

@@ -127,6 +127,25 @@ class Shipping_Notifications {
     public static function run_daily_checks() {
         self::check_customership_expirations();
         self::trigger_overdue_reminders();
+        self::check_shipment_delays();
+    }
+
+    private static function check_shipment_delays() {
+        global $wpdb;
+        $now = current_time('mysql');
+
+        // Find shipments that passed delivery date but are not delivered/cancelled/delayed
+        $overdue_shipments = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, shipment_number, customer_id FROM {$wpdb->prefix}shipping_shipments
+             WHERE delivery_date < %s
+             AND status NOT IN ('delivered', 'cancelled', 'delayed', 'operational-issue')",
+            $now
+        ));
+
+        foreach ($overdue_shipments as $s) {
+            // Update status to delayed - this will trigger alerts via Shipping_DB::update_shipment
+            Shipping_DB::update_shipment($s->id, ['status' => 'delayed']);
+        }
     }
 
     public static function trigger_overdue_reminders() {

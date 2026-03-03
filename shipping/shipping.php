@@ -61,6 +61,8 @@ add_action('admin_init', function() {
         $info['extra_details'] = sanitize_textarea_field($_POST['shipping_extra_details']);
         $info['shipping_logo'] = esc_url_raw($_POST['shipping_logo']);
         $info['currency'] = sanitize_text_field($_POST['shipping_currency']);
+        $info['map_link'] = esc_url_raw($_POST['shipping_map_link'] ?? '');
+        $info['extra_details'] = sanitize_textarea_field($_POST['shipping_extra_details'] ?? '');
 
         Shipping_Settings::save_shipping_info($info);
 

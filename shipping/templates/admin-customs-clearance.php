@@ -9,8 +9,8 @@ $sub = $_GET['sub'] ?? 'documentation';
         <button class="shipping-tab-btn <?php echo $sub == 'status' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customs-status', this); loadCustomsStatus()">حالة التخليص</button>
     </div>
     <div style="display: flex; gap: 10px;">
-        <button class="shipping-btn" onclick="document.getElementById('modal-add-customs').style.display='flex'">+ بيان جمركي</button>
-        <button class="shipping-btn" style="background: #4a5568;" onclick="document.getElementById('modal-add-customs-doc').style.display='flex'">+ رفع مستند</button>
+        <button class="shipping-btn" onclick="ShippingModal.open('modal-add-customs')">+ بيان جمركي</button>
+        <button class="shipping-btn" style="background: #4a5568;" onclick="ShippingModal.open('modal-add-customs-doc')">+ رفع مستند</button>
     </div>
 </div>
 
@@ -81,7 +81,7 @@ $sub = $_GET['sub'] ?? 'documentation';
                     <label>بلد المنشأ</label>
                     <input type="text" class="shipping-input" placeholder="مثال: الصين">
                 </div>
-                <button type="button" class="shipping-btn" onclick="calculateCustomsTax()">احسب التقدير</button>
+                <button type="button" class="shipping-btn" onclick="CustomsController.calculateTax()">احسب التقدير</button>
             </form>
         </div>
         <div class="shipping-card" id="tax-result-card" style="display: none; background: #fffaf0; border: 1px solid #feebc8;">
@@ -119,11 +119,11 @@ $sub = $_GET['sub'] ?? 'documentation';
 </div>
 
 <!-- Add Customs Record Modal -->
-<div id="modal-add-customs" class="shipping-modal">
+<div id="modal-add-customs" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 500px;">
         <div class="shipping-modal-header">
-            <h4>إضافة بيان جمركي جديد</h4>
-            <button onclick="document.getElementById('modal-add-customs').style.display='none'">&times;</button>
+            <h3>إضافة بيان جمركي جديد</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-add-customs')">&times;</button>
         </div>
         <form id="form-add-customs-full">
             <input type="hidden" name="action" value="shipping_add_customs">
@@ -166,11 +166,11 @@ $sub = $_GET['sub'] ?? 'documentation';
 </div>
 
 <!-- Upload Doc Modal -->
-<div id="modal-add-customs-doc" class="shipping-modal">
+<div id="modal-add-customs-doc" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 500px;">
         <div class="shipping-modal-header">
-            <h4>رفع مستند جمركي</h4>
-            <button onclick="document.getElementById('modal-add-customs-doc').style.display='none'">&times;</button>
+            <h3>رفع مستند جمركي</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-add-customs-doc')">&times;</button>
         </div>
         <form id="form-add-customs-doc">
             <input type="hidden" name="action" value="shipping_add_customs_doc">
@@ -205,107 +205,7 @@ $sub = $_GET['sub'] ?? 'documentation';
 </div>
 
 <script>
-function calculateCustomsTax() {
-    const val = parseFloat(document.getElementById('goods-value').value) || 0;
-    const rate = parseFloat(document.getElementById('hs-category').value);
-
-    const duties = val * rate;
-    const vat = (val + duties) * 0.15;
-    const total = duties + vat;
-
-    document.getElementById('res-duties').innerText = duties.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
-    document.getElementById('res-vat').innerText = vat.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
-    document.getElementById('res-total-tax').innerText = total.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
-    document.getElementById('tax-result-card').style.display = 'block';
-}
-
-function loadCustomsDocs() {
-    fetch(ajaxurl + '?action=shipping_get_customs_docs')
-    .then(r => r.json()).then(res => {
-        const tbody = document.getElementById('customs-docs-table');
-        if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد مستندات مرفوعة</td></tr>'; return; }
-        tbody.innerHTML = res.data.filter(d => d.doc_type !== 'Commercial Invoice').map(d => `
-            <tr>
-                <td><strong>#${d.shipment_id}</strong></td>
-                <td>${d.doc_type}</td>
-                <td><span class="shipping-badge">${d.status}</span></td>
-                <td>${d.uploaded_at}</td>
-                <td><a href="${d.file_url}" target="_blank" class="shipping-btn-outline" style="padding:4px 8px; font-size:11px;">معاينة</a></td>
-            </tr>
-        `).join('');
-    });
-}
-
-function loadCustomsInvoices() {
-    fetch(ajaxurl + '?action=shipping_get_customs_docs')
-    .then(r => r.json()).then(res => {
-        const tbody = document.getElementById('customs-invoices-table');
-        if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد فواتير تجارية</td></tr>'; return; }
-        tbody.innerHTML = res.data.filter(d => d.doc_type === 'Commercial Invoice').map(d => `
-            <tr>
-                <td><strong>#${d.shipment_id}</strong></td>
-                <td>CIN-${d.id}</td>
-                <td>---</td>
-                <td><span class="shipping-badge">${d.status}</span></td>
-                <td><a href="${d.file_url}" target="_blank" class="shipping-btn-outline" style="padding:4px 8px; font-size:11px;">عرض الفاتورة</a></td>
-            </tr>
-        `).join('');
-    });
-}
-
-function loadShipmentsForSelect() {
-    fetch(ajaxurl + '?action=shipping_get_all_shipments')
-    .then(r => r.json()).then(res => {
-        if (res.success) {
-            const options = res.data.map(s => `<option value="${s.id}">${s.shipment_number}</option>`).join('');
-            document.getElementById('select-customs-shipment').innerHTML = '<option value="">اختر الشحنة...</option>' + options;
-            document.getElementById('select-doc-shipment').innerHTML = '<option value="">اختر الشحنة...</option>' + options;
-        }
-    });
-}
-
-function loadCustomsStatus() {
-    fetch(ajaxurl + '?action=shipping_get_customs_status')
-    .then(r => r.json()).then(res => {
-        const tbody = document.getElementById('customs-status-table');
-        if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">لا توجد بيانات تخليص</td></tr>'; return; }
-        tbody.innerHTML = res.data.map(c => `
-            <tr>
-                <td><strong>${c.shipment_number}</strong></td>
-                <td>${c.documentation_status}</td>
-                <td>${parseFloat(c.duties_amount).toFixed(2)} <?php echo esc_js($currency); ?></td>
-                <td><span class="shipping-badge">${c.clearance_status}</span></td>
-            </tr>
-        `).join('');
-    });
-}
-
-document.getElementById('form-add-customs-full')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    fetch(ajaxurl, { method: 'POST', body: new FormData(this) })
-    .then(r => r.json()).then(res => {
-        if (res.success) {
-            shippingShowNotification('تم حفظ البيانات الجمركية');
-            location.reload();
-        } else alert(res.data);
-    });
-});
-
-document.getElementById('form-add-customs-doc')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    fetch(ajaxurl, { method: 'POST', body: new FormData(this) })
-    .then(r => r.json()).then(res => {
-        if (res.success) {
-            shippingShowNotification('تم رفع المستند بنجاح');
-            document.getElementById('modal-add-customs-doc').style.display = 'none';
-            loadCustomsDocs();
-        } else alert(res.data);
-    });
-});
-
 window.addEventListener('DOMContentLoaded', () => {
-    loadShipmentsForSelect();
-    if ("<?php echo $sub; ?>" === 'documentation') loadCustomsDocs();
-    if ("<?php echo $sub; ?>" === 'status') loadCustomsStatus();
+    CustomsController.init();
 });
 </script>
