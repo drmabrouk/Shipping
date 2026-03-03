@@ -121,6 +121,19 @@
         .then(r => r.json()).then(res => { if (res.success) location.reload(); });
     };
 
+    window.shippingOpenAddShipmentModal = function() {
+        const url = '<?php echo admin_url("admin.php?page=shipping-admin&shipping_tab=shipment-mgmt&trigger_add=1"); ?>';
+        if (window.location.href.indexOf('shipping_tab=shipment-mgmt') !== -1) {
+            if (typeof openShipmentCreationModal === 'function') {
+                openShipmentCreationModal();
+            } else {
+                window.location.href = url;
+            }
+        } else {
+            window.location.href = url;
+        }
+    };
+
     window.shippingOpenMediaUploader = function(inputId) {
         const frame = wp.media({
             title: 'اختر شعار Shipping',
@@ -431,10 +444,13 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                         <?php
                         $notif_alerts = [];
                         if ($is_restricted) {
-                            $customer_by_wp = $wpdb->get_row($wpdb->prepare("SELECT id, last_paid_customership_year FROM {$wpdb->prefix}shipping_customers WHERE wp_user_id = %d", $user->ID));
+                            $customer_by_wp = $wpdb->get_row($wpdb->prepare("SELECT id, account_expiration_date, account_status FROM {$wpdb->prefix}shipping_customers WHERE wp_user_id = %d", $user->ID));
                             if ($customer_by_wp) {
-                                if ($customer_by_wp->last_paid_customership_year < date('Y')) {
-                                    $notif_alerts[] = ['text' => 'يوجد متأخرات في تجديد الحساب السنوية', 'type' => 'warning'];
+                                if ($customer_by_wp->account_expiration_date && strtotime($customer_by_wp->account_expiration_date) < time()) {
+                                    $notif_alerts[] = ['text' => 'تنبيه: حسابك منتهي الصلاحية، يرجى التجديد.', 'type' => 'warning'];
+                                }
+                                if ($customer_by_wp->account_status === 'pending') {
+                                    $notif_alerts[] = ['text' => 'حسابك بانتظار المراجعة والتدقيق.', 'type' => 'info'];
                                 }
                             }
                         }
@@ -468,6 +484,11 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                         <?php endif; ?>
                     </div>
                 </div>
+
+                <!-- Add Shipment Button -->
+                <?php if ($is_admin || $is_sys_admin || $is_administrator): ?>
+                    <button onclick="shippingOpenAddShipmentModal()" class="shipping-btn" style="height: 36px; padding: 0 15px; font-size: 12px; background: var(--shipping-primary-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; white-space: nowrap;">+ إضافة شحنة</button>
+                <?php endif; ?>
             </div>
 
             <div class="shipping-user-dropdown" style="position: relative;">
@@ -538,17 +559,6 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                     <a href="<?php echo add_query_arg('shipping_tab', 'summary'); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-dashboard"></span> <?php echo $labels['tab_summary']; ?></a>
                 </li>
 
-                <!-- Shipping Dashboard Sections -->
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'general-stats' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg(['shipping_tab' => 'general-stats', 'sub' => 'active-shipments']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-chart-bar"></span> <?php echo $labels['tab_general_stats']; ?></a>
-                    <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'general-stats' ? 'block' : 'none'; ?>;">
-                        <li><a href="<?php echo add_query_arg(['shipping_tab' => 'general-stats', 'sub' => 'active-shipments']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'active-shipments' ? 'shipping-sub-active' : ''; ?>">الشحنات النشطة</a></li>
-                        <li><a href="<?php echo add_query_arg(['shipping_tab' => 'general-stats', 'sub' => 'delivered-shipments']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'delivered-shipments' ? 'shipping-sub-active' : ''; ?>">الشحنات المسلمة</a></li>
-                        <li><a href="<?php echo add_query_arg(['shipping_tab' => 'general-stats', 'sub' => 'delayed-shipments']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'delayed-shipments' ? 'shipping-sub-active' : ''; ?>">الشحنات المتأخرة</a></li>
-                        <li><a href="<?php echo add_query_arg(['shipping_tab' => 'general-stats', 'sub' => 'total-revenue']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'total-revenue' ? 'shipping-sub-active' : ''; ?>">إجمالي الإيرادات</a></li>
-                        <li><a href="<?php echo add_query_arg(['shipping_tab' => 'general-stats', 'sub' => 'real-time-status']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'real-time-status' ? 'shipping-sub-active' : ''; ?>">حالة العمليات المباشرة</a></li>
-                    </ul>
-                </li>
 
                 <li class="shipping-sidebar-item <?php echo $active_tab == 'shipment-mgmt' ? 'shipping-active' : ''; ?>">
                     <a href="<?php echo add_query_arg(['shipping_tab' => 'shipment-mgmt', 'sub' => 'create-shipment']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-products"></span> <?php echo $labels['tab_shipment_mgmt']; ?></a>
@@ -658,9 +668,6 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
 
             <?php
             switch ($active_tab) {
-                case 'general-stats':
-                    include SHIPPING_PLUGIN_DIR . 'templates/admin-general-stats.php';
-                    break;
 
                 case 'shipment-mgmt':
                     include SHIPPING_PLUGIN_DIR . 'templates/admin-shipment-mgmt.php';
@@ -727,6 +734,7 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                             <button class="shipping-tab-btn <?php echo $sub == 'design' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('design-settings', this)">التصميم والمظهر</button>
                             <button class="shipping-tab-btn <?php echo $sub == 'pages' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('page-customization', this)">تخصيص الصفحات</button>
                             <button class="shipping-tab-btn <?php echo ($sub == 'alerts') ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('system-alerts-settings', this)">تنبيهات النظام</button>
+                            <button class="shipping-tab-btn <?php echo ($sub == 'logs') ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('system-activity-logs', this)">سجل النشاطات</button>
                             <button class="shipping-tab-btn <?php echo ($sub == 'backup') ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('backup-settings', this)">مركز النسخ الاحتياطي</button>
                         </div>
 
@@ -972,6 +980,85 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                             </div>
                         </div>
 
+
+                        <div id="system-activity-logs" class="shipping-internal-tab" style="display: <?php echo ($sub == 'logs') ? 'block' : 'none'; ?>;">
+                            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                                    <div>
+                                        <h4 style="margin:0; font-size:18px;">سجل نشاطات النظام الشامل</h4>
+                                        <div style="font-size:12px; color:#718096;">مراقبة كافة العمليات والتغييرات التي تمت على النظام.</div>
+                                    </div>
+                                    <div style="display:flex; gap:10px;">
+                                        <form method="get" style="display:flex; gap:5px;">
+                                            <input type="hidden" name="shipping_tab" value="advanced-settings">
+                                            <input type="hidden" name="sub" value="logs">
+                                            <input type="text" name="log_search" value="<?php echo esc_attr($_GET['log_search'] ?? ''); ?>" placeholder="بحث في السجلات..." class="shipping-input" style="width:250px;">
+                                            <button type="submit" class="shipping-btn" style="width:auto; padding:0 20px;">بحث</button>
+                                        </form>
+                                        <button onclick="shippingDeleteAllLogs()" class="shipping-btn" style="background:#e53e3e; width:auto;">تفريغ السجل</button>
+                                    </div>
+                                </div>
+                                <div class="shipping-table-container" style="margin:0;">
+                                    <table class="shipping-table" style="font-size:13px;">
+                                        <thead>
+                                            <tr>
+                                                <th>الوقت</th>
+                                                <th>المستخدم</th>
+                                                <th>الإجراء</th>
+                                                <th>التفاصيل</th>
+                                                <th>إجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php
+                                            $limit = 25;
+                                            $page_num = isset($_GET['log_page']) ? max(1, intval($_GET['log_page'])) : 1;
+                                            $offset = ($page_num - 1) * $limit;
+                                            $search = sanitize_text_field($_GET['log_search'] ?? '');
+                                            $all_logs = Shipping_Logger::get_logs($limit, $offset, $search);
+                                            $total_logs = Shipping_Logger::get_total_logs($search);
+                                            $total_pages = ceil($total_logs / $limit);
+
+                                            if (empty($all_logs)): ?>
+                                                <tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">لا توجد سجلات مسجلة حالياً.</td></tr>
+                                            <?php endif;
+
+                                            foreach ($all_logs as $log):
+                                                $can_rollback = strpos($log->details, 'ROLLBACK_DATA:') === 0;
+                                                $details_display = $can_rollback ? 'عملية تتضمن بيانات للاستعادة' : esc_html($log->details);
+                                            ?>
+                                                <tr>
+                                                    <td><?php echo esc_html($log->created_at); ?></td>
+                                                    <td><strong><?php echo esc_html($log->display_name ?: 'نظام'); ?></strong></td>
+                                                    <td><span class="shipping-badge"><?php echo esc_html($log->action); ?></span></td>
+                                                    <td title="<?php echo esc_attr($log->details); ?>"><?php echo mb_strimwidth($details_display, 0, 120, "..."); ?></td>
+                                                    <td>
+                                                        <div style="display:flex; gap:5px;">
+                                                            <button onclick='shippingViewLogDetails(<?php echo json_encode($log); ?>)' class="shipping-btn shipping-btn-outline" style="padding:4px 10px; font-size:11px;">التفاصيل</button>
+                                                            <?php if ($can_rollback): ?>
+                                                                <button onclick="shippingRollbackLog(<?php echo $log->id; ?>)" class="shipping-btn" style="padding:4px 10px; font-size:11px; background:#38a169;">استعادة</button>
+                                                            <?php endif; ?>
+                                                            <button onclick="shippingDeleteLog(<?php echo $log->id; ?>)" class="shipping-btn" style="padding:4px 10px; font-size:11px; background:#e53e3e;">حذف</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php if ($total_pages > 1): ?>
+                                    <div style="display:flex; justify-content:center; gap:10px; margin-top:20px;">
+                                        <?php if ($page_num > 1): ?>
+                                            <a href="<?php echo add_query_arg(['log_page' => $page_num - 1, 'sub' => 'logs']); ?>" class="shipping-btn shipping-btn-outline" style="width:auto; padding:5px 15px; text-decoration:none;">السابق</a>
+                                        <?php endif; ?>
+                                        <span style="align-self:center; font-size:14px;">صفحة <?php echo $page_num; ?> من <?php echo $total_pages; ?></span>
+                                        <?php if ($page_num < $total_pages): ?>
+                                            <a href="<?php echo add_query_arg(['log_page' => $page_num + 1, 'sub' => 'logs']); ?>" class="shipping-btn shipping-btn-outline" style="width:auto; padding:5px 15px; text-decoration:none;">التالي</a>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
 
                         <div id="backup-settings" class="shipping-internal-tab" style="display: <?php echo ($sub == 'backup') ? 'block' : 'none'; ?>;">
                             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:30px;">

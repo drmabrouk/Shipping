@@ -341,8 +341,8 @@ class Shipping_DB {
         }
         if (!empty($args['search'])) {
             $s = '%' . $wpdb->esc_like($args['search']) . '%';
-            $where .= " AND (o.order_number LIKE %s OR c.name LIKE %s)";
-            $params[] = $s; $params[] = $s;
+            $where .= " AND (o.order_number LIKE %s OR c.first_name LIKE %s OR c.last_name LIKE %s)";
+            $params[] = $s; $params[] = $s; $params[] = $s;
         }
 
         $query = "SELECT o.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name, c.email as customer_email, c.phone as customer_phone
@@ -615,7 +615,7 @@ class Shipping_DB {
 
                 // Trigger Automated Alert
                 if ($shipment && $shipment->customer_id) {
-                    $customer = $wpdb->get_row($wpdb->prepare("SELECT email, name FROM {$wpdb->prefix}shipping_customers WHERE id = %d", $shipment->customer_id));
+                    $customer = $wpdb->get_row($wpdb->prepare("SELECT email, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers WHERE id = %d", $shipment->customer_id));
 
                     if ($data['status'] === 'delayed') {
                         Shipping_Notifications::send_template_notification($shipment->customer_id, 'shipment_delay_alert', ['{shipment_number}' => $shipment->shipment_number, '{status}' => 'متأخرة']);
@@ -673,6 +673,16 @@ class Shipping_DB {
             'old_value' => is_array($old_val) ? json_encode($old_val) : $old_val,
             'new_value' => is_array($new_val) ? json_encode($new_val) : $new_val,
             'created_at' => current_time('mysql')
+        ));
+    }
+
+    public static function get_shipment_logs($shipment_id) {
+        global $wpdb;
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT l.*, u.display_name FROM {$wpdb->prefix}shipping_shipment_logs l
+             LEFT JOIN {$wpdb->prefix}users u ON l.user_id = u.ID
+             WHERE l.shipment_id = %d ORDER BY l.created_at DESC",
+            $shipment_id
         ));
     }
 
@@ -865,7 +875,8 @@ class Shipping_DB {
 
         if (!empty($args['search'])) {
             $s = '%' . $wpdb->esc_like($args['search']) . '%';
-            $where .= " AND (t.subject LIKE %s OR m.name LIKE %s)";
+            $where .= " AND (t.subject LIKE %s OR m.first_name LIKE %s OR m.last_name LIKE %s)";
+            $params[] = $s;
             $params[] = $s;
             $params[] = $s;
         }

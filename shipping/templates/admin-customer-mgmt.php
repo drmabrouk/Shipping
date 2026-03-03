@@ -49,7 +49,7 @@ $sub = $_GET['sub'] ?? 'profiles';
 
 <div id="customer-history" class="shipping-internal-tab" style="display: <?php echo $sub == 'history' ? 'block' : 'none'; ?>;">
     <?php
-    $history = $wpdb->get_results("SELECT s.*, c.name as customer_name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id ORDER BY s.created_at DESC LIMIT 100");
+    $history = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id ORDER BY s.created_at DESC LIMIT 100");
     ?>
     <div class="shipping-card">
         <h4>سجل الشحنات العام للعملاء</h4>
@@ -173,7 +173,7 @@ $sub = $_GET['sub'] ?? 'profiles';
                     <label>العميل</label>
                     <select name="customer_id" class="shipping-input" required>
                         <option value="">اختر العميل...</option>
-                        <?php foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>"; ?>
+                        <?php foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->first_name . ' ' . $c->last_name)."</option>"; ?>
                     </select>
                 </div>
                 <div class="shipping-form-group">

@@ -92,6 +92,7 @@ class Shipping_Public {
         add_shortcode('shipping_about', array($this, 'shortcode_about'));
         add_shortcode('shipping_contact', array($this, 'shortcode_contact'));
         add_shortcode('shipping_blog', array($this, 'shortcode_blog'));
+        add_shortcode('shipping_public_tracking', array($this, 'shortcode_public_tracking'));
 
         // Backward Compatibility Mapping
         add_shortcode('sm_login', array($this, 'shortcode_login'));
@@ -245,6 +246,12 @@ class Shipping_Public {
             </div>
         </div>
         <?php
+        return ob_get_clean();
+    }
+
+    public function shortcode_public_tracking() {
+        ob_start();
+        include SHIPPING_PLUGIN_DIR . 'templates/public-shipment-tracking-page.php';
         return ob_get_clean();
     }
 
@@ -2370,6 +2377,18 @@ class Shipping_Public {
             wp_send_json_success();
         } else {
             wp_send_json_error('Failed to update location');
+        }
+    }
+
+    public function ajax_public_tracking_ajax() {
+        $number = sanitize_text_field($_GET['number'] ?? '');
+        if (empty($number)) wp_send_json_error('Missing number');
+
+        $shipment = Shipping_DB::get_shipment_with_tracking($number);
+        if ($shipment) {
+            wp_send_json_success($shipment);
+        } else {
+            wp_send_json_error('Not found');
         }
     }
 

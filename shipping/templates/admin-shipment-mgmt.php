@@ -3,7 +3,7 @@ global $wpdb;
 $sub = $_GET['sub'] ?? 'create-shipment';
 ?>
 <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
-    <button class="shipping-tab-btn <?php echo $sub == 'create-shipment' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-create', this)">إنشاء شحنة</button>
+    <button class="shipping-tab-btn <?php echo $sub == 'registry' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-registry', this)">📋 سجل الشحنات</button>
     <button class="shipping-tab-btn <?php echo $sub == 'tracking' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-tracking', this)">تتبع الشحنات</button>
     <button class="shipping-tab-btn <?php echo $sub == 'monitoring' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-monitoring', this)">مراقبة الحالة</button>
     <button class="shipping-tab-btn <?php echo $sub == 'schedule' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-schedule', this)">جدول الشحن</button>
@@ -11,97 +11,157 @@ $sub = $_GET['sub'] ?? 'create-shipment';
     <button class="shipping-tab-btn <?php echo $sub == 'bulk' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-bulk', this)">إدخال بالجملة</button>
 </div>
 
-<!-- 1. Centralized Shipment Creation -->
-<div id="shipment-create" class="shipping-internal-tab" style="display: <?php echo $sub == 'create-shipment' ? 'block' : 'none'; ?>;">
-    <div class="shipping-grid" style="grid-template-columns: 2fr 1fr;">
-        <div class="shipping-card">
-            <h4>إنشاء شحنة جديدة</h4>
-            <form id="shipping-create-shipment-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px;">
-                <div class="shipping-form-group" style="grid-column: span 2;">
-                    <label>العميل:</label>
-                    <select name="customer_id" class="shipping-select" required>
-                        <option value="">اختر العميل...</option>
-                        <?php
-                        $customers = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}shipping_customers");
-                        foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
-                        ?>
-                    </select>
-                </div>
-                <div class="shipping-form-group"><label>نقطة الانطلاق:</label><input type="text" name="origin" class="shipping-input" required></div>
-                <div class="shipping-form-group"><label>نقطة الوصول:</label><input type="text" name="destination" class="shipping-input" required></div>
-
-                <div class="shipping-form-group">
-                    <label>الوزن (كجم):</label>
-                    <input type="number" name="weight" id="shipment-weight" step="0.01" class="shipping-input" required onchange="calculateRealtimeCost()">
-                </div>
-                <div class="shipping-form-group">
-                    <label>المسافة التقريبية (كم):</label>
-                    <input type="number" name="distance" id="shipment-distance" class="shipping-input" placeholder="0" onchange="calculateRealtimeCost()">
-                </div>
-
-                <div class="shipping-form-group"><label>الأبعاد (L x W x H):</label><input type="text" name="dimensions" class="shipping-input" placeholder="30x30x30"></div>
-
-                <div class="shipping-form-group">
-                    <label>التصنيف:</label>
-                    <select name="classification" id="shipment-classification" class="shipping-select" onchange="calculateRealtimeCost()">
-                        <option value="standard">قياسي (Standard)</option>
-                        <option value="express">سريع (Express)</option>
-                        <option value="priority">أولوية (Priority)</option>
-                        <option value="fragile">قابل للكسر (Fragile)</option>
-                    </select>
-                </div>
-
-                <div class="shipping-form-group" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 10px; margin-top: 5px;">
-                    <label style="font-weight: 700;">خيارات إضافية:</label>
-                    <div style="display: flex; gap: 20px; margin-top: 10px;">
-                        <label><input type="checkbox" name="is_urgent" value="1" onchange="calculateRealtimeCost()"> شحن مستعجل</label>
-                        <label><input type="checkbox" name="is_insured" value="1" onchange="calculateRealtimeCost()"> تأمين الشحنة</label>
-                    </div>
-                </div>
-
-                <div class="shipping-form-group"><label>تاريخ الاستلام:</label><input type="datetime-local" name="pickup_date" class="shipping-input"></div>
-                <div class="shipping-form-group"><label>تاريخ التسليم المتوقع:</label><input type="datetime-local" name="delivery_date" class="shipping-input"></div>
-
-                <div class="shipping-form-group">
-                    <label>المركبة (Fleet):</label>
-                    <select name="carrier_id" class="shipping-select">
-                        <option value="0">غير محدد</option>
-                        <?php
-                        $fleet = $wpdb->get_results("SELECT id, vehicle_number FROM {$wpdb->prefix}shipping_fleet WHERE status = 'available'");
-                        foreach($fleet as $v) echo "<option value='{$v->id}'>".esc_html($v->vehicle_number)."</option>";
-                        ?>
-                    </select>
-                </div>
-                <div class="shipping-form-group">
-                    <label>المسار (Route):</label>
-                    <select name="route_id" class="shipping-select">
-                        <option value="0">اختر المسار...</option>
-                        <?php
-                        $routes = $wpdb->get_results("SELECT id, route_name FROM {$wpdb->prefix}shipping_logistics");
-                        foreach($routes as $r) echo "<option value='{$r->id}'>".esc_html($r->route_name)."</option>";
-                        ?>
-                    </select>
-                </div>
-
-                <input type="hidden" name="order_id" id="shipment-order-id-input" value="">
-                <input type="hidden" name="estimated_cost" id="shipment-estimated-cost-input" value="0">
-                <button type="submit" class="shipping-btn" style="grid-column: span 2; height: 50px; font-weight: 800; margin-top: 10px;">تأكيد وإنشاء الشحنة</button>
-            </form>
+<!-- Shipment Registry -->
+<div id="shipment-registry" class="shipping-internal-tab" style="display: <?php echo ($sub == 'registry' || $sub == 'create-shipment') ? 'block' : 'none'; ?>;">
+    <?php
+    $all_shipments = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.is_archived = 0 ORDER BY s.created_at DESC");
+    ?>
+    <div class="shipping-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h4 style="margin:0;">سجل الشحنات الشامل</h4>
+            <button onclick="openShipmentCreationModal()" class="shipping-btn" style="width:auto;">+ إضافة شحنة جديدة</button>
         </div>
+        <div class="shipping-table-container">
+            <table class="shipping-table">
+                <thead>
+                    <tr>
+                        <th>رقم الشحنة</th>
+                        <th>العميل</th>
+                        <th>النوع</th>
+                        <th>المسار</th>
+                        <th>الوزن</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if(empty($all_shipments)): ?>
+                        <tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">لا توجد شحنات مسجلة حالياً.</td></tr>
+                    <?php else: foreach($all_shipments as $s):
+                        // Determine if domestic or international based on origin/destination (simple logic for demo)
+                        $is_intl = (strpos(strtolower($s->origin), 'saudi') === false && strpos(strtolower($s->destination), 'saudi') === false && !empty($s->origin)) || (strpos(strtolower($s->origin), 'saudi') !== strpos(strtolower($s->destination), 'saudi'));
+                        // Actually let's assume if it contains a comma and different countries.
+                        // For simplicity, let's use a classification meta or just random pastel indicator.
+                        $type_label = $is_intl ? 'دولية' : 'محلية';
+                        $type_class = $is_intl ? 'badge-intl' : 'badge-dom';
+                    ?>
+                        <tr>
+                            <td><strong><?php echo $s->shipment_number; ?></strong></td>
+                            <td><?php echo esc_html($s->customer_name); ?></td>
+                            <td><span class="pastel-badge <?php echo $type_class; ?>"><?php echo $type_label; ?></span></td>
+                            <td><div style="font-size:11px;"><?php echo $s->origin; ?> <br> ➔ <?php echo $s->destination; ?></div></td>
+                            <td><?php echo $s->weight; ?> كجم</td>
+                            <td><span class="pastel-badge status-<?php echo $s->status; ?>"><?php echo $s->status; ?></span></td>
+                            <td>
+                                <div style="display:flex; gap:5px;">
+                                    <button class="shipping-btn-icon" title="تتبع" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">📡</button>
+                                    <button class="shipping-btn-icon" title="تفاصيل" onclick="viewFullDossier(<?php echo $s->id; ?>)">📋</button>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-        <div class="shipping-card" id="realtime-cost-card" style="background: #f8fafc; border: 2px solid #e2e8f0;">
-            <h4 style="margin-top:0; color: #4a5568;">💰 ملخص التكلفة التقديرية</h4>
-            <div id="cost-loader" style="display: none; text-align: center; padding: 20px;">
-                <span class="dashicons dashicons-update spin" style="font-size: 30px; width: 30px; height: 30px;"></span>
-            </div>
-            <div id="cost-details" style="display: block;">
-                <div style="text-align: center; padding: 25px; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e0; margin-bottom: 20px;">
-                    <div style="font-size: 0.85em; color: #718096; margin-bottom: 5px;">إجمالي التكلفة المتوقعة</div>
-                    <div style="font-size: 2.2em; font-weight: 900; color: var(--shipping-primary-color);" id="display-cost">0.00</div>
-                    <div style="font-weight: 700; color: #4a5568;">SAR</div>
-                </div>
-                <div id="cost-breakdown-list" style="font-size: 13px; color: #4a5568;">
-                    <p style="text-align: center; opacity: 0.7;">أدخل بيانات الوزن والمسافة لحساب التكلفة تلقائياً.</p>
+<!-- Creation Modal -->
+<div id="modal-create-shipment" class="shipping-modal">
+    <div class="shipping-modal-content" style="max-width: 900px;">
+        <div class="shipping-modal-header">
+            <h4>إنشاء شحنة جديدة</h4>
+            <button onclick="document.getElementById('modal-create-shipment').style.display='none'">&times;</button>
+        </div>
+        <div class="shipping-modal-body" style="padding: 25px;">
+            <div class="shipping-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px;">
+                <form id="shipping-create-shipment-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                    <div class="shipping-form-group" style="grid-column: span 2;">
+                        <label>العميل:</label>
+                        <select name="customer_id" class="shipping-select" required>
+                            <option value="">اختر العميل...</option>
+                            <?php
+                            $customers = $wpdb->get_results("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers ORDER BY first_name ASC");
+                            foreach($customers as $c) echo "<option value='{$c->id}'>".esc_html($c->name)."</option>";
+                            ?>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group"><label>نقطة الانطلاق:</label><input type="text" name="origin" class="shipping-input" required></div>
+                    <div class="shipping-form-group"><label>نقطة الوصول:</label><input type="text" name="destination" class="shipping-input" required></div>
+
+                    <div class="shipping-form-group">
+                        <label>الوزن (كجم):</label>
+                        <input type="number" name="weight" id="shipment-weight" step="0.01" class="shipping-input" required onchange="calculateRealtimeCost()">
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>المسافة التقريبية (كم):</label>
+                        <input type="number" name="distance" id="shipment-distance" class="shipping-input" placeholder="0" onchange="calculateRealtimeCost()">
+                    </div>
+
+                    <div class="shipping-form-group"><label>الأبعاد (L x W x H):</label><input type="text" name="dimensions" class="shipping-input" placeholder="30x30x30"></div>
+
+                    <div class="shipping-form-group">
+                        <label>التصنيف:</label>
+                        <select name="classification" id="shipment-classification" class="shipping-select" onchange="calculateRealtimeCost()">
+                            <option value="standard">قياسي (Standard)</option>
+                            <option value="express">سريع (Express)</option>
+                            <option value="priority">أولوية (Priority)</option>
+                            <option value="fragile">قابل للكسر (Fragile)</option>
+                        </select>
+                    </div>
+
+                    <div class="shipping-form-group" style="grid-column: span 2; border-top: 1px solid #eee; padding-top: 10px; margin-top: 5px;">
+                        <label style="font-weight: 700;">خيارات إضافية:</label>
+                        <div style="display: flex; gap: 20px; margin-top: 10px;">
+                            <label><input type="checkbox" name="is_urgent" value="1" onchange="calculateRealtimeCost()"> شحن مستعجل</label>
+                            <label><input type="checkbox" name="is_insured" value="1" onchange="calculateRealtimeCost()"> تأمين الشحنة</label>
+                        </div>
+                    </div>
+
+                    <div class="shipping-form-group"><label>تاريخ الاستلام:</label><input type="datetime-local" name="pickup_date" class="shipping-input"></div>
+                    <div class="shipping-form-group"><label>تاريخ التسليم المتوقع:</label><input type="datetime-local" name="delivery_date" class="shipping-input"></div>
+
+                    <div class="shipping-form-group">
+                        <label>المركبة (Fleet):</label>
+                        <select name="carrier_id" class="shipping-select">
+                            <option value="0">غير محدد</option>
+                            <?php
+                            $fleet = $wpdb->get_results("SELECT id, vehicle_number FROM {$wpdb->prefix}shipping_fleet WHERE status = 'available'");
+                            foreach($fleet as $v) echo "<option value='{$v->id}'>".esc_html($v->vehicle_number)."</option>";
+                            ?>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>المسار (Route):</label>
+                        <select name="route_id" class="shipping-select">
+                            <option value="0">اختر المسار...</option>
+                            <?php
+                            $routes = $wpdb->get_results("SELECT id, route_name FROM {$wpdb->prefix}shipping_logistics");
+                            foreach($routes as $r) echo "<option value='{$r->id}'>".esc_html($r->route_name)."</option>";
+                            ?>
+                        </select>
+                    </div>
+
+                    <input type="hidden" name="order_id" id="shipment-order-id-input" value="">
+                    <input type="hidden" name="estimated_cost" id="shipment-estimated-cost-input" value="0">
+                    <button type="submit" class="shipping-btn" style="grid-column: span 2; height: 50px; font-weight: 800; margin-top: 10px;">تأكيد وإنشاء الشحنة</button>
+                </form>
+
+                <div class="shipping-card" id="realtime-cost-card" style="background: #f8fafc; border: 2px solid #e2e8f0; margin: 0;">
+                    <h4 style="margin-top:0; color: #4a5568;">💰 ملخص التكلفة</h4>
+                    <div id="cost-loader" style="display: none; text-align: center; padding: 20px;">
+                        <span class="dashicons dashicons-update spin" style="font-size: 30px; width: 30px; height: 30px;"></span>
+                    </div>
+                    <div id="cost-details">
+                        <div style="text-align: center; padding: 20px; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e0; margin-bottom: 20px;">
+                            <div style="font-size: 0.8em; color: #718096;">التكلفة المتوقعة</div>
+                            <div style="font-size: 2em; font-weight: 900; color: var(--shipping-primary-color);" id="display-cost">0.00</div>
+                            <div style="font-weight: 700; color: #4a5568; font-size: 12px;">SAR</div>
+                        </div>
+                        <div id="cost-breakdown-list" style="font-size: 12px; color: #4a5568;">
+                            <p style="text-align: center; opacity: 0.7;">أدخل بيانات الشحنة للحساب.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -189,9 +249,9 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 <div id="shipment-schedule" class="shipping-internal-tab" style="display: <?php echo $sub == 'schedule' ? 'block' : 'none'; ?>;">
     <?php
     $today = date('Y-m-d');
-    $pickups = $wpdb->get_results($wpdb->prepare("SELECT s.*, c.name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(pickup_date) = %s", $today));
-    $dispatches = $wpdb->get_results($wpdb->prepare("SELECT s.*, c.name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(dispatch_date) = %s", $today));
-    $deliveries = $wpdb->get_results($wpdb->prepare("SELECT s.*, c.name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(delivery_date) = %s", $today));
+    $pickups = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(pickup_date) = %s", $today));
+    $dispatches = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(dispatch_date) = %s", $today));
+    $deliveries = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(delivery_date) = %s", $today));
     ?>
     <div class="shipping-card">
         <h4>🗓️ جدول الشحن والمهام لليوم (<?php echo $today; ?>)</h4>
@@ -245,7 +305,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 <!-- 10. Advanced Archiving System -->
 <div id="shipment-archiving" class="shipping-internal-tab" style="display: <?php echo $sub == 'archiving' ? 'block' : 'none'; ?>;">
     <?php
-    $archived_shipments = $wpdb->get_results("SELECT s.*, c.name as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.is_archived = 1 ORDER BY s.updated_at DESC");
+    $archived_shipments = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.is_archived = 1 ORDER BY s.updated_at DESC");
     ?>
     <div class="shipping-card">
         <h4>أرشفة الشحنات والاسترجاع</h4>
@@ -299,6 +359,10 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 </div>
 
 <script>
+window.openShipmentCreationModal = function() {
+    document.getElementById('modal-create-shipment').style.display = 'flex';
+};
+
 let costTimeout;
 function calculateRealtimeCost() {
     clearTimeout(costTimeout);
@@ -512,6 +576,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('order_id');
     if (orderId) {
+        openShipmentCreationModal();
         fetch(ajaxurl + '?action=shipping_get_orders&id=' + orderId)
         .then(r => r.json()).then(res => {
             if (res.success && res.data.length) {
@@ -530,6 +595,10 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (urlParams.has('trigger_add')) {
+        openShipmentCreationModal();
+    }
+
     const dossierId = urlParams.get('view_dossier');
     if (dossierId) {
         viewFullDossier(dossierId);
@@ -538,6 +607,17 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <style>
+.pastel-badge {
+    padding: 4px 12px; border-radius: 50px; font-size: 11px; font-weight: 700; display: inline-block;
+}
+.badge-intl { background: #e9d8fd; color: #553c9a; }
+.badge-dom { background: #bee3f8; color: #2b6cb0; }
+
+.status-pending { background: #fed7d7; color: #9b2c2c; }
+.status-in-transit { background: #feebc8; color: #9c4221; }
+.status-delivered { background: #c6f6d5; color: #22543d; }
+.status-cancelled { background: #edf2f7; color: #4a5568; }
+
 .spin { animation: spin 2s linear infinite; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
 

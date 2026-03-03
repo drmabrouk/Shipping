@@ -131,7 +131,7 @@ class Shipping_Notifications {
 
     public static function trigger_overdue_reminders() {
         global $wpdb;
-        $overdue_invoices = $wpdb->get_results("SELECT i.*, c.email, c.name FROM {$wpdb->prefix}shipping_invoices i JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id WHERE i.status = 'unpaid' AND i.due_date < CURDATE()");
+        $overdue_invoices = $wpdb->get_results("SELECT i.*, c.email, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_invoices i JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id WHERE i.status = 'unpaid' AND i.due_date < CURDATE()");
 
         foreach ($overdue_invoices as $inv) {
             if ($inv->email) {
@@ -175,7 +175,7 @@ class Shipping_Notifications {
     public static function get_logs($limit = 100, $offset = 0) {
         global $wpdb;
         return $wpdb->get_results($wpdb->prepare(
-            "SELECT l.*, m.name as customer_name
+            "SELECT l.*, CONCAT(m.first_name, ' ', m.last_name) as customer_name
              FROM {$wpdb->prefix}shipping_notification_logs l
              LEFT JOIN {$wpdb->prefix}shipping_customers m ON l.customer_id = m.id
              ORDER BY l.sent_at DESC LIMIT %d OFFSET %d",

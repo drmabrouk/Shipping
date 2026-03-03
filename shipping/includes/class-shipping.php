@@ -59,6 +59,8 @@ class Shipping {
         $this->loader->add_action('wp_ajax_shipping_bulk_shipments', $plugin_public, 'ajax_bulk_shipments');
         $this->loader->add_action('wp_ajax_shipping_save_invoice', $plugin_public, 'ajax_save_invoice');
         $this->loader->add_action('wp_ajax_shipping_process_payment', $plugin_public, 'ajax_process_payment');
+        $this->loader->add_action('wp_ajax_shipping_public_tracking_ajax', $plugin_public, 'ajax_public_tracking_ajax');
+        $this->loader->add_action('wp_ajax_nopriv_shipping_public_tracking_ajax', $plugin_public, 'ajax_public_tracking_ajax');
         $this->loader->add_action('wp_ajax_shipping_get_billing_report', $plugin_public, 'ajax_get_billing_report');
         $this->loader->add_action('wp_ajax_shipping_add_customer', $plugin_public, 'ajax_add_customer');
         $this->loader->add_action('wp_ajax_shipping_add_order', $plugin_public, 'ajax_add_order');
