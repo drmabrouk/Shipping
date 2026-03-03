@@ -6,11 +6,11 @@ $is_officer = current_user_can('manage_options');
 
 <?php if ($is_officer): ?>
 <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #eee; overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
-    <button class="shipping-tab-btn shipping-active" onclick="shippingOpenInternalTab('dashboard-overview', this)">📊 نظرة عامة</button>
-    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-active', this)">📦 شحنات نشطة</button>
-    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-delivered', this)">✅ شحنات مسلمة</button>
-    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-delayed', this)">⚠️ شحنات متأخرة</button>
-    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-ops', this)">⚙️ حالة العمليات</button>
+    <button class="shipping-tab-btn shipping-active" onclick="shippingOpenInternalTab('dashboard-overview', this)">نظرة عامة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-active', this)">شحنات نشطة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-delivered', this)">شحنات مسلمة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-delayed', this)">شحنات متأخرة</button>
+    <button class="shipping-tab-btn" onclick="shippingOpenInternalTab('dashboard-ops', this)">حالة العمليات</button>
 </div>
 
 <div id="dashboard-overview" class="shipping-internal-tab">
@@ -124,7 +124,7 @@ $is_officer = current_user_can('manage_options');
 
 <div id="dashboard-ops" class="shipping-internal-tab" style="display: none;">
     <div class="shipping-card">
-        <h4 style="margin-bottom: 20px;">📊 حالة العمليات المباشرة</h4>
+        <h4 style="margin-bottom: 20px;">حالة العمليات المباشرة</h4>
         <?php
         $status_counts = $wpdb->get_results("SELECT status, COUNT(*) as count FROM {$wpdb->prefix}shipping_shipments WHERE is_archived = 0 GROUP BY status");
         ?>

@@ -3,15 +3,13 @@ $sub = $_GET['sub'] ?? 'calculator';
 ?>
 <div class="shipping-admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <div class="shipping-tabs-wrapper" style="display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 5px;">
-        <button class="shipping-tab-btn <?php echo $sub == 'calculator' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-calc', this)">🧮 حاسبة الشحن</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'transport-costs' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-transport', this)">📋 قواعد التسعير</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'extra-charges' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-extra', this)">➕ رسوم إضافية</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'special-offers' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-offers', this)">🎁 العروض الخاصة</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'calculator' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-calc', this)">حاسبة الشحن</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'transport-costs' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-transport', this)">قواعد التسعير</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'extra-charges' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-extra', this)">رسوم إضافية</button>
     </div>
     <div style="display: flex; gap: 10px;">
         <button class="shipping-btn" onclick="openPricingModal('rule')">+ قاعدة جديدة</button>
         <button class="shipping-btn" style="background: #38a169;" onclick="openPricingModal('fee')">+ رسم إضافي</button>
-        <button class="shipping-btn" style="background: #805ad5;" onclick="openPricingModal('offer')">+ عرض خاص</button>
     </div>
 </div>
 
@@ -19,7 +17,7 @@ $sub = $_GET['sub'] ?? 'calculator';
 <div id="pricing-calc" class="shipping-internal-tab" style="display: <?php echo $sub == 'calculator' ? 'block' : 'none'; ?>;">
     <div class="shipping-grid" style="grid-template-columns: 1fr 1fr;">
         <div class="shipping-card">
-            <h4 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">🧮 حاسبة التكلفة التقديرية</h4>
+            <h4 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">حاسبة التكلفة التقديرية</h4>
             <form id="shipping-calculator-form">
                 <div class="shipping-form-group">
                     <label>الوزن (كجم)</label>
@@ -62,7 +60,7 @@ $sub = $_GET['sub'] ?? 'calculator';
         </div>
 
         <div id="calculator-results" class="shipping-card" style="display: none; background: #f0fdf4; border: 2px solid #bbf7d0;">
-            <h4 style="margin-top:0; color: #166534;">📊 تحليل التكلفة المتوقعة</h4>
+            <h4 style="margin-top:0; color: #166534;">تحليل التكلفة المتوقعة</h4>
             <div id="cost-breakdown" style="margin-bottom: 20px;">
                 <!-- Results injected here -->
             </div>
@@ -78,7 +76,7 @@ $sub = $_GET['sub'] ?? 'calculator';
 <!-- 2. Pricing Rules -->
 <div id="pricing-transport" class="shipping-internal-tab" style="display: <?php echo $sub == 'transport-costs' ? 'block' : 'none'; ?>;">
     <div class="shipping-card">
-        <h4>📋 قواعد تسعير النقل والشحن</h4>
+        <h4>قواعد تسعير النقل والشحن</h4>
         <div class="shipping-table-container">
             <table class="shipping-table">
                 <thead>
@@ -102,7 +100,7 @@ $sub = $_GET['sub'] ?? 'calculator';
 <!-- 3. Additional Fees -->
 <div id="pricing-extra" class="shipping-internal-tab" style="display: <?php echo $sub == 'extra-charges' ? 'block' : 'none'; ?>;">
     <div class="shipping-card">
-        <h4>➕ الرسوم والخدمات الإضافية</h4>
+        <h4>الرسوم والخدمات الإضافية</h4>
         <div class="shipping-table-container">
             <table class="shipping-table">
                 <thead>
@@ -122,48 +120,6 @@ $sub = $_GET['sub'] ?? 'calculator';
     </div>
 </div>
 
-<!-- 4. Special Offers -->
-<div id="pricing-offers" class="shipping-internal-tab" style="display: <?php echo $sub == 'special-offers' ? 'block' : 'none'; ?>;">
-    <div class="shipping-grid" style="grid-template-columns: 2fr 1fr; gap: 20px;">
-        <div class="shipping-card">
-            <h4>🎁 العروض الخاصة والحملات الترويجية</h4>
-            <div class="shipping-table-container">
-                <table class="shipping-table">
-                    <thead>
-                        <tr>
-                            <th>العرض / الكوبون</th>
-                            <th>الخصم</th>
-                            <th>النوع</th>
-                            <th>تاريخ الانتهاء</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="special-offers-table">
-                        <!-- Data via AJAX -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="shipping-card" style="background: #fdf2f2; border: 1px solid #fed7d7;">
-            <h4 style="margin-top:0; color: #c53030;">📈 إحصائيات التكاليف والأرباح</h4>
-            <div style="height: 250px; margin-bottom: 20px;">
-                <canvas id="costProfitChart"></canvas>
-            </div>
-            <div style="display: grid; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; padding: 10px; background: #fff; border-radius: 8px;">
-                    <span>إجمالي الخصومات الممنوحة:</span>
-                    <strong id="total-discounts-val" style="color: #c53030;">0.00 SAR</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 10px; background: #fff; border-radius: 8px;">
-                    <span>صافي الربح التقديري:</span>
-                    <strong id="net-profit-val" style="color: #2f855a;">0.00 SAR</strong>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Modals for CRUD -->
 <!-- Rule Modal -->
@@ -252,45 +208,6 @@ $sub = $_GET['sub'] ?? 'calculator';
     </div>
 </div>
 
-<!-- Offer Modal -->
-<div id="modal-pricing-offer" class="shipping-modal">
-    <div class="shipping-modal-content" style="max-width: 450px;">
-        <div class="shipping-modal-header">
-            <h4>إضافة عرض خاص / كوبون</h4>
-            <button onclick="closePricingModal('offer')">&times;</button>
-        </div>
-        <form id="form-pricing-offer">
-            <input type="hidden" name="action" value="shipping_add_special_offer">
-            <?php wp_nonce_field('shipping_pricing_action', 'nonce'); ?>
-            <div class="shipping-modal-body">
-                <div class="shipping-form-group">
-                    <label>كود العرض أو الاسم</label>
-                    <input type="text" name="offer_code" class="shipping-input" required>
-                </div>
-                <div class="shipping-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="shipping-form-group">
-                        <label>قيمة الخصم</label>
-                        <input type="number" step="0.01" name="discount_value" class="shipping-input" required>
-                    </div>
-                    <div class="shipping-form-group">
-                        <label>نوع الخصم</label>
-                        <select name="discount_type" class="shipping-input">
-                            <option value="percentage">نسبة مئوية %</option>
-                            <option value="fixed">خصم ثابت</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="shipping-form-group">
-                    <label>تاريخ الانتهاء</label>
-                    <input type="date" name="expiry_date" class="shipping-input">
-                </div>
-            </div>
-            <div class="shipping-modal-footer">
-                <button type="submit" class="shipping-btn">تنشيط العرض</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <script>
 function openPricingModal(type) {
@@ -314,7 +231,7 @@ function loadPricingData() {
                 <td>${parseFloat(r.cost_per_km).toFixed(2)} / كم</td>
                 <td>${parseFloat(r.min_cost).toFixed(2)} SAR</td>
                 <td>
-                    <button class="shipping-btn-icon" onclick="deletePricingItem('rule', ${r.id})">🗑️</button>
+                    <button class="shipping-btn" style="padding:4px 10px; font-size:11px; background:#e53e3e;" onclick="deletePricingItem('rule', ${r.id})">حذف</button>
                 </td>
             </tr>
         `).join('');
@@ -332,30 +249,12 @@ function loadPricingData() {
                 <td>${f.fee_type === 'percentage' ? 'نسبة' : 'مبلغ ثابت'}</td>
                 <td>${f.is_automatic == 1 ? '<span class="status-badge status-active">تلقائي</span>' : '<span class="status-badge status-inactive">يدوي</span>'}</td>
                 <td>
-                    <button class="shipping-btn-icon" onclick="deletePricingItem('fee', ${f.id})">🗑️</button>
+                    <button class="shipping-btn" style="padding:4px 10px; font-size:11px; background:#e53e3e;" onclick="deletePricingItem('fee', ${f.id})">حذف</button>
                 </td>
             </tr>
         `).join('');
     });
 
-    // Load Offers
-    fetch(ajaxurl + '?action=shipping_get_special_offers')
-    .then(r => r.json()).then(res => {
-        const tbody = document.getElementById('special-offers-table');
-        if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد عروض منشورة</td></tr>'; return; }
-        tbody.innerHTML = res.data.map(o => `
-            <tr>
-                <td><code style="background:#edf2f7; padding:4px 8px; border-radius:4px;">${o.offer_code}</code></td>
-                <td>${parseFloat(o.discount_value).toFixed(2)}${o.discount_type === 'percentage' ? '%' : ' SAR'}</td>
-                <td>${o.discount_type === 'percentage' ? 'نسبة' : 'ثابت'}</td>
-                <td>${o.expiry_date || 'غير محدد'}</td>
-                <td>${new Date(o.expiry_date) < new Date() ? '<span class="status-badge status-inactive">منتهي</span>' : '<span class="status-badge status-active">نشط</span>'}</td>
-                <td>
-                    <button class="shipping-btn-icon" onclick="deletePricingItem('offer', ${o.id})">🗑️</button>
-                </td>
-            </tr>
-        `).join('');
-    });
 }
 
 function deletePricingItem(type, id) {
@@ -363,7 +262,6 @@ function deletePricingItem(type, id) {
     const fd = new FormData();
     let action = 'shipping_delete_pricing_rule';
     if (type === 'fee') action = 'shipping_delete_additional_fee';
-    if (type === 'offer') action = 'shipping_delete_special_offer';
 
     fd.append('action', action);
     fd.append('id', id);
@@ -410,7 +308,7 @@ document.getElementById('shipping-calculator-form')?.addEventListener('submit', 
 });
 
 // Generic Form Handlers
-['rule', 'fee', 'offer'].forEach(type => {
+['rule', 'fee'].forEach(type => {
     document.getElementById('form-pricing-' + type)?.addEventListener('submit', function(e) {
         e.preventDefault();
         const btn = this.querySelector('button');
@@ -429,40 +327,8 @@ document.getElementById('shipping-calculator-form')?.addEventListener('submit', 
     });
 });
 
-function initPricingCharts() {
-    const ctx = document.getElementById('costProfitChart')?.getContext('2d');
-    if (!ctx) return;
-
-    fetch(ajaxurl + '?action=shipping_get_billing_report')
-    .then(r => r.json()).then(res => {
-        if (res.success) {
-            const stats = res.data.summary;
-            document.getElementById('total-discounts-val').innerText = stats.total_discounts.toFixed(2) + ' SAR';
-            document.getElementById('net-profit-val').innerText = (stats.total_revenue - stats.total_discounts).toFixed(2) + ' SAR';
-
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['صافي الربح', 'خصومات ممنوحة'],
-                    datasets: [{
-                        data: [stats.total_revenue - stats.total_discounts, stats.total_discounts],
-                        backgroundColor: ['#2f855a', '#e53e3e'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } }
-                }
-            });
-        }
-    });
-}
-
 window.addEventListener('DOMContentLoaded', () => {
     loadPricingData();
-    initPricingCharts();
 });
 </script>
 

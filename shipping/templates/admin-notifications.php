@@ -51,8 +51,8 @@ $templates = [
                 <ul style="list-style: none; padding: 0; margin: 0;">
                     <?php foreach ($templates as $type => $label): ?>
                         <li style="margin-bottom: 10px;">
-                            <button onclick="shippingLoadTemplate('<?php echo $type; ?>')" class="shipping-btn shipping-btn-outline" style="width: 100%; text-align: right; justify-content: flex-start;">
-                                <span class="dashicons dashicons-email-alt" style="margin-left: 10px;"></span> <?php echo $label; ?>
+                            <button onclick="shippingLoadTemplate('<?php echo $type; ?>')" class="shipping-btn shipping-btn-outline" style="width: 100%; text-align: right;">
+                                <?php echo $label; ?>
                             </button>
                         </li>
                     <?php endforeach; ?>
@@ -64,7 +64,6 @@ $templates = [
 
             <div id="template-editor-container" style="background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0;">
                 <div id="template-empty-state" style="text-align: center; padding: 60px; color: #94a3b8;">
-                    <span class="dashicons dashicons-edit" style="font-size: 48px; width: 48px; height: 48px;"></span>
                     <p>يرجى اختيار قالب من القائمة الجانبية للبدء في تخصيص محتواه.</p>
                 </div>
 

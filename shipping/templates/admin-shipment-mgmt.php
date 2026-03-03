@@ -3,7 +3,7 @@ global $wpdb;
 $sub = $_GET['sub'] ?? 'create-shipment';
 ?>
 <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
-    <button class="shipping-tab-btn <?php echo $sub == 'registry' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-registry', this)">📋 سجل الشحنات</button>
+    <button class="shipping-tab-btn <?php echo $sub == 'registry' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-registry', this)">سجل الشحنات</button>
     <button class="shipping-tab-btn <?php echo $sub == 'tracking' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-tracking', this)">تتبع الشحنات</button>
     <button class="shipping-tab-btn <?php echo $sub == 'monitoring' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-monitoring', this)">مراقبة الحالة</button>
     <button class="shipping-tab-btn <?php echo $sub == 'schedule' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-schedule', this)">جدول الشحن</button>
@@ -54,8 +54,8 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                             <td><span class="pastel-badge status-<?php echo $s->status; ?>"><?php echo $s->status; ?></span></td>
                             <td>
                                 <div style="display:flex; gap:5px;">
-                                    <button class="shipping-btn-icon" title="تتبع" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">📡</button>
-                                    <button class="shipping-btn-icon" title="تفاصيل" onclick="viewFullDossier(<?php echo $s->id; ?>)">📋</button>
+                                    <button class="shipping-btn" style="padding:5px 10px; font-size:11px;" onclick="document.getElementById('track-number').value='<?php echo $s->shipment_number; ?>'; shippingOpenInternalTab('shipment-tracking', this.closest('.shipping-internal-tab').parentElement.querySelector('.shipping-tab-btn:nth-child(2)')); trackShipment();">تتبع</button>
+                                    <button class="shipping-btn" style="padding:5px 10px; font-size:11px; background:#319795;" onclick="viewFullDossier(<?php echo $s->id; ?>)">تفاصيل</button>
                                 </div>
                             </td>
                         </tr>
@@ -148,7 +148,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                 </form>
 
                 <div class="shipping-card" id="realtime-cost-card" style="background: #f8fafc; border: 2px solid #e2e8f0; margin: 0;">
-                    <h4 style="margin-top:0; color: #4a5568;">💰 ملخص التكلفة</h4>
+                    <h4 style="margin-top:0; color: #4a5568;">ملخص التكلفة</h4>
                     <div id="cost-loader" style="display: none; text-align: center; padding: 20px;">
                         <span class="dashicons dashicons-update spin" style="font-size: 30px; width: 30px; height: 30px;"></span>
                     </div>
@@ -254,12 +254,12 @@ $sub = $_GET['sub'] ?? 'create-shipment';
     $deliveries = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(delivery_date) = %s", $today));
     ?>
     <div class="shipping-card">
-        <h4>🗓️ جدول الشحن والمهام لليوم (<?php echo $today; ?>)</h4>
+        <h4>جدول الشحن والمهام لليوم (<?php echo $today; ?>)</h4>
 
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top:20px;">
             <!-- Pickups -->
             <div style="background:#fffaf0; border:1px solid #feebc8; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#dd6b20;">📦 مهام الاستلام (${<?php echo count($pickups); ?>})</h5>
+                <h5 style="margin:0 0 15px 0; color:#dd6b20;">مهام الاستلام (${<?php echo count($pickups); ?>})</h5>
                 <div style="display:grid; gap:10px;">
                     <?php if(empty($pickups)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
                     foreach($pickups as $p): ?>
@@ -273,7 +273,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 
             <!-- Dispatches -->
             <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#3182ce;">🚀 مهام الانطلاق (${<?php echo count($dispatches); ?>})</h5>
+                <h5 style="margin:0 0 15px 0; color:#3182ce;">مهام الانطلاق (${<?php echo count($dispatches); ?>})</h5>
                 <div style="display:grid; gap:10px;">
                     <?php if(empty($dispatches)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
                     foreach($dispatches as $d): ?>
@@ -287,7 +287,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 
             <!-- Deliveries -->
             <div style="background:#f0fff4; border:1px solid #c6f6d5; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#38a169;">🏁 مهام التسليم (${<?php echo count($deliveries); ?>})</h5>
+                <h5 style="margin:0 0 15px 0; color:#38a169;">مهام التسليم (${<?php echo count($deliveries); ?>})</h5>
                 <div style="display:grid; gap:10px;">
                     <?php if(empty($deliveries)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
                     foreach($deliveries as $del): ?>
@@ -486,7 +486,7 @@ function viewFullDossier(id) {
 
         let html = `
             <div class="shipping-card" style="margin:0;">
-                <h5 style="color:var(--shipping-primary-color); border-bottom:1px solid #eee; padding-bottom:10px;">📦 تفاصيل الشحنة واللوجستيات</h5>
+                <h5 style="color:var(--shipping-primary-color); border-bottom:1px solid #eee; padding-bottom:10px;">تفاصيل الشحنة واللوجستيات</h5>
                 <div style="font-size:13px; display:grid; gap:8px; margin-top:10px;">
                     <div><strong>العميل:</strong> ${d.shipment.customer_name}</div>
                     <div><strong>المسار:</strong> ${d.shipment.route_name || 'غير محدد'}</div>
@@ -501,7 +501,7 @@ function viewFullDossier(id) {
             </div>
 
             <div class="shipping-card" style="margin:0;">
-                <h5 style="color:#3182ce; border-bottom:1px solid #eee; padding-bottom:10px;">🛒 الطلب المرتبط والفواتير</h5>
+                <h5 style="color:#3182ce; border-bottom:1px solid #eee; padding-bottom:10px;">الطلب المرتبط والفواتير</h5>
                 <div style="font-size:13px; display:grid; gap:8px; margin-top:10px;">
                     ${d.order ? `
                         <div><strong>رقم الطلب:</strong> ${d.order.order_number}</div>
@@ -519,7 +519,7 @@ function viewFullDossier(id) {
             </div>
 
             <div class="shipping-card" style="margin:0; grid-column: 1 / -1;">
-                <h5 style="color:#805ad5; border-bottom:1px solid #eee; padding-bottom:10px;">⚖️ التخليص الجمركي والوثائق</h5>
+                <h5 style="color:#805ad5; border-bottom:1px solid #eee; padding-bottom:10px;">التخليص الجمركي والوثائق</h5>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:10px;">
                     <div>
                         <div style="font-size:13px; margin-bottom:10px;"><strong>الحالة الجمركية:</strong> ${d.customs ? d.customs.clearance_status : 'لا توجد بيانات'}</div>
@@ -535,7 +535,7 @@ function viewFullDossier(id) {
             </div>
 
             <div class="shipping-card" style="margin:0; grid-column: 1 / -1;">
-                <h5 style="border-bottom:1px solid #eee; padding-bottom:10px;">🕒 سجل التتبع التاريخي</h5>
+                <h5 style="border-bottom:1px solid #eee; padding-bottom:10px;">سجل التتبع التاريخي</h5>
                 <div style="max-height:200px; overflow-y:auto; font-size:12px; margin-top:10px;">
                     ${d.events.length ? d.events.map(ev => `
                         <div style="display:flex; gap:10px; margin-bottom:5px; padding-bottom:5px; border-bottom:1px solid #f8f9fa;">

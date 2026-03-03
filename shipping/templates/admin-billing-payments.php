@@ -15,7 +15,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
     $payments = $wpdb->get_results("SELECT p.*, i.invoice_number, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_payments p JOIN {$wpdb->prefix}shipping_invoices i ON p.invoice_id = i.id JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id ORDER BY p.payment_date DESC");
     ?>
     <div class="shipping-card">
-        <h4>💳 سجل المدفوعات والتحويلات</h4>
+        <h4>سجل المدفوعات والتحويلات</h4>
         <div class="shipping-table-container">
             <table class="shipping-table">
                 <thead><tr><th>المعرف</th><th>رقم الفاتورة</th><th>العميل</th><th>المبلغ</th><th>الوسيلة</th><th>التاريخ</th></tr></thead>
@@ -44,7 +44,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
         <div class="shipping-card">
             <h4>إصدار فاتورة شحن</h4>
             <div style="background: #fdf2f2; padding: 15px; border-radius: 10px; border: 1px solid #fed7d7; margin-bottom: 20px; font-size: 13px;">
-                💡 <strong>نصيحة:</strong> يمكنك استيراد بيانات الشحنة لحساب التكلفة والبنود تلقائياً بناءً على قواعد التسعير المسجلة.
+                <strong>نصيحة:</strong> يمكنك استيراد بيانات الشحنة لحساب التكلفة والبنود تلقائياً بناءً على قواعد التسعير المسجلة.
             </div>
 
             <div class="shipping-form-group" style="margin-bottom: 25px; display: flex; gap: 10px; align-items: flex-end;">

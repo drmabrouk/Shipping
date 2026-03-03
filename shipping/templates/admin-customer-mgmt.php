@@ -3,11 +3,11 @@ $sub = $_GET['sub'] ?? 'profiles';
 ?>
 <div class="shipping-admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <div class="shipping-tabs-wrapper" style="display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 5px;">
-        <button class="shipping-tab-btn <?php echo $sub == 'profiles' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-profiles', this)">👥 ملفات العملاء</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'history' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-history', this)">📜 سجل الشحنات</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'address-book' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-address', this)">📓 دفتر العناوين</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'contracts' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-contracts', this); loadContracts()">✍️ العقود والاتفاقيات</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'classification' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-class', this)">🏷️ التصنيف</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'profiles' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-profiles', this)">ملفات العملاء</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'history' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-history', this)">سجل الشحنات</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'address-book' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-address', this)">دفتر العناوين</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'contracts' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-contracts', this); loadContracts()">العقود والاتفاقيات</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'classification' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-class', this)">التصنيف</button>
     </div>
     <div style="display: flex; gap: 10px;">
         <button class="shipping-btn" onclick="document.getElementById('add-customer-modal').style.display='flex'">+ عميل جديد</button>
@@ -95,7 +95,7 @@ $sub = $_GET['sub'] ?? 'profiles';
 
 <div id="customer-contracts" class="shipping-internal-tab" style="display: <?php echo $sub == 'contracts' ? 'block' : 'none'; ?>;">
     <div class="shipping-card">
-        <h4>🤝 إدارة عقود الخدمة والاتفاقيات</h4>
+        <h4>إدارة عقود الخدمة والاتفاقيات</h4>
         <div class="shipping-table-container">
             <table class="shipping-table">
                 <thead>
@@ -121,7 +121,7 @@ $sub = $_GET['sub'] ?? 'profiles';
     $class_stats = $wpdb->get_results("SELECT classification, COUNT(*) as count FROM {$wpdb->prefix}shipping_customers GROUP BY classification");
     ?>
     <div class="shipping-card">
-        <h4>🏷️ تحليل تصنيفات العملاء</h4>
+        <h4>تحليل تصنيفات العملاء</h4>
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top:20px;">
             <?php foreach($class_stats as $cs): ?>
                 <div style="background:#fff; border:1px solid #e2e8f0; padding:20px; border-radius:12px; text-align:center;">

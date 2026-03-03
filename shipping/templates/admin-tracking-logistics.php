@@ -386,8 +386,8 @@ $sub = $_GET['sub'] ?? 'live-tracking';
 
     <div id="vehicle-details-section" style="display: none; margin-top: 40px; border-top: 2px solid #eee; padding-top: 30px;">
         <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; border-bottom: 1px solid #eee; margin-bottom: 20px;">
-            <button class="shipping-tab-btn shipping-active" onclick="shippingOpenVehicleSubTab('maintenance', this)">🛠️ سجل الصيانة</button>
-            <button class="shipping-tab-btn" onclick="shippingOpenVehicleSubTab('shipments', this)">📦 الشحنات المرتبطة</button>
+            <button class="shipping-tab-btn shipping-active" onclick="shippingOpenVehicleSubTab('maintenance', this)">سجل الصيانة</button>
+            <button class="shipping-tab-btn" onclick="shippingOpenVehicleSubTab('shipments', this)">الشحنات المرتبطة</button>
         </div>
 
         <div id="vehicle-maintenance-tab" class="vehicle-sub-tab">
@@ -414,7 +414,7 @@ $sub = $_GET['sub'] ?? 'live-tracking';
         </div>
 
         <div id="vehicle-shipments-tab" class="vehicle-sub-tab" style="display:none;">
-            <h4>📦 الشحنات النشطة لهذه المركبة</h4>
+            <h4>الشحنات النشطة لهذه المركبة</h4>
             <div class="shipping-table-container">
                 <table class="shipping-table">
                     <thead>

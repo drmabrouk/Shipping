@@ -629,7 +629,6 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'pricing-costs', 'sub' => 'calculator']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'calculator' ? 'shipping-sub-active' : ''; ?>">حاسبة الشحن</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'pricing-costs', 'sub' => 'transport-costs']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'transport-costs' ? 'shipping-sub-active' : ''; ?>">تكاليف النقل</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'pricing-costs', 'sub' => 'extra-charges']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'extra-charges' ? 'shipping-sub-active' : ''; ?>">رسوم إضافية</a></li>
-                        <li><a href="<?php echo add_query_arg(['shipping_tab' => 'pricing-costs', 'sub' => 'special-offers']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'special-offers' ? 'shipping-sub-active' : ''; ?>">عروض خاصة</a></li>
                     </ul>
                 </li>
                 <?php endif; ?>
@@ -1214,7 +1213,10 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
 }
 
 .shipping-sidebar-dropdown {
-    list-style: none; padding: 0; margin: 0; background: rgba(0,0,0,0.04); display: none;
+    list-style: none; padding: 0; margin: 0; background: rgba(0,0,0,0.04); display: none !important;
+}
+.shipping-sidebar-item.shipping-active .shipping-sidebar-dropdown {
+    display: block !important;
 }
 .shipping-sidebar-dropdown li a {
     display: flex; align-items: center; gap: 12px; padding: 10px 25px;
