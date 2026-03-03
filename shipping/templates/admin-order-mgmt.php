@@ -82,7 +82,7 @@ foreach($statuses as $status => $id): ?>
                         </select>
                     </div>
                     <div class="shipping-form-group">
-                        <label>المبلغ الإجمالي (SAR)</label>
+                        <label>المبلغ الإجمالي (<?php echo esc_html($currency); ?>)</label>
                         <input type="number" step="0.01" name="total_amount" class="shipping-input" placeholder="0.00" required>
                     </div>
                 </div>
@@ -127,7 +127,7 @@ foreach($statuses as $status => $id): ?>
                         </select>
                     </div>
                     <div class="shipping-form-group">
-                        <label>المبلغ الإجمالي (SAR)</label>
+                        <label>المبلغ الإجمالي (<?php echo esc_html($currency); ?>)</label>
                         <input type="number" step="0.01" name="total_amount" class="shipping-input" required>
                     </div>
                 </div>
@@ -190,7 +190,7 @@ function loadOrders(status = currentStatus) {
                     <div style="font-weight:700;">${o.customer_name}</div>
                     <div style="font-size:11px; color:#718096;">${o.customer_phone}</div>
                 </td>
-                <td>${parseFloat(o.total_amount).toFixed(2)} SAR</td>
+                <td>${parseFloat(o.total_amount).toFixed(2)} <?php echo esc_js($currency); ?></td>
                 <td style="font-size:12px; max-width:200px;">
                     <div class="truncate" title="${o.pickup_address}">من: ${o.pickup_address}</div>
                     <div class="truncate" title="${o.delivery_address}">إلى: ${o.delivery_address}</div>

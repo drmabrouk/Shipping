@@ -133,10 +133,12 @@ class Shipping_Notifications {
         global $wpdb;
         $overdue_invoices = $wpdb->get_results("SELECT i.*, c.email, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_invoices i JOIN {$wpdb->prefix}shipping_customers c ON i.customer_id = c.id WHERE i.status = 'unpaid' AND i.due_date < CURDATE()");
 
+        $shipping = Shipping_Settings::get_shipping_info();
+        $currency = $shipping['currency'] ?? 'SAR';
         foreach ($overdue_invoices as $inv) {
             if ($inv->email) {
                 $subject = "تنبيه: فاتورة متأخرة السداد - " . $inv->invoice_number;
-                $message = "عزيزي العميل " . $inv->name . ",\n\nنود تذكيركم بوجود فاتورة متأخرة السداد برقم " . $inv->invoice_number . " بمبلغ " . $inv->total_amount . " SAR.\nيرجى السداد في أقرب وقت لتجنب انقطاع الخدمة.\n\nشكراً لكم.";
+                $message = "عزيزي العميل " . $inv->name . ",\n\nنود تذكيركم بوجود فاتورة متأخرة السداد برقم " . $inv->invoice_number . " بمبلغ " . $inv->total_amount . " " . $currency . ".\nيرجى السداد في أقرب وقت لتجنب انقطاع الخدمة.\n\nشكراً لكم.";
                 wp_mail($inv->email, $subject, $message);
             }
         }

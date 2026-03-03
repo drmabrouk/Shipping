@@ -64,7 +64,7 @@ $sub = $_GET['sub'] ?? 'documentation';
             <h4>تقدير الرسوم الجمركية والضرائب</h4>
             <form id="form-tax-calculator" style="margin-top: 20px;">
                 <div class="shipping-form-group">
-                    <label>القيمة المصرح بها للبضاعة (SAR)</label>
+                    <label>القيمة المصرح بها للبضاعة (<?php echo esc_html($currency); ?>)</label>
                     <input type="number" id="goods-value" class="shipping-input" placeholder="0.00">
                 </div>
                 <div class="shipping-form-group">
@@ -87,10 +87,10 @@ $sub = $_GET['sub'] ?? 'documentation';
         <div class="shipping-card" id="tax-result-card" style="display: none; background: #fffaf0; border: 1px solid #feebc8;">
             <h4>ملخص التقدير</h4>
             <div style="display: grid; gap: 15px; margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between;"><span>الرسوم الجمركية:</span><strong id="res-duties">0.00 SAR</strong></div>
-                <div style="display: flex; justify-content: space-between;"><span>ضريبة القيمة المضافة (15%):</span><strong id="res-vat">0.00 SAR</strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>الرسوم الجمركية:</span><strong id="res-duties">0.00 <?php echo esc_html($currency); ?></strong></div>
+                <div style="display: flex; justify-content: space-between;"><span>ضريبة القيمة المضافة (15%):</span><strong id="res-vat">0.00 <?php echo esc_html($currency); ?></strong></div>
                 <div style="display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 10px; font-size: 1.2em; color: #c05621;">
-                    <span>إجمالي التقدير:</span><strong id="res-total-tax">0.00 SAR</strong>
+                    <span>إجمالي التقدير:</span><strong id="res-total-tax">0.00 <?php echo esc_html($currency); ?></strong>
                 </div>
             </div>
         </div>
@@ -145,7 +145,7 @@ $sub = $_GET['sub'] ?? 'documentation';
                     </select>
                 </div>
                 <div class="shipping-form-group">
-                    <label>الرسوم الجمركية المقدرة (SAR)</label>
+                    <label>الرسوم الجمركية المقدرة (<?php echo esc_html($currency); ?>)</label>
                     <input type="number" step="0.01" name="duties_amount" class="shipping-input" required>
                 </div>
                 <div class="shipping-form-group">
@@ -213,9 +213,9 @@ function calculateCustomsTax() {
     const vat = (val + duties) * 0.15;
     const total = duties + vat;
 
-    document.getElementById('res-duties').innerText = duties.toFixed(2) + ' SAR';
-    document.getElementById('res-vat').innerText = vat.toFixed(2) + ' SAR';
-    document.getElementById('res-total-tax').innerText = total.toFixed(2) + ' SAR';
+    document.getElementById('res-duties').innerText = duties.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
+    document.getElementById('res-vat').innerText = vat.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
+    document.getElementById('res-total-tax').innerText = total.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
     document.getElementById('tax-result-card').style.display = 'block';
 }
 
@@ -273,7 +273,7 @@ function loadCustomsStatus() {
             <tr>
                 <td><strong>${c.shipment_number}</strong></td>
                 <td>${c.documentation_status}</td>
-                <td>${parseFloat(c.duties_amount).toFixed(2)} SAR</td>
+                <td>${parseFloat(c.duties_amount).toFixed(2)} <?php echo esc_js($currency); ?></td>
                 <td><span class="shipping-badge">${c.clearance_status}</span></td>
             </tr>
         `).join('');

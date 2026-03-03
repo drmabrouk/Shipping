@@ -1894,11 +1894,14 @@ class Shipping_Public {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         check_ajax_referer('shipping_shipment_action', 'nonce');
 
+        $origin = sanitize_text_field($_POST['origin_country'] . ', ' . $_POST['origin_city']);
+        $destination = sanitize_text_field($_POST['destination_country'] . ', ' . $_POST['destination_city']);
+
         $data = array(
             'shipment_number' => 'SHP-' . strtoupper(wp_generate_password(8, false)),
             'customer_id' => intval($_POST['customer_id']),
-            'origin' => sanitize_text_field($_POST['origin']),
-            'destination' => sanitize_text_field($_POST['destination']),
+            'origin' => $origin,
+            'destination' => $destination,
             'weight' => floatval($_POST['weight']),
             'dimensions' => sanitize_text_field($_POST['dimensions']),
             'classification' => sanitize_text_field($_POST['classification']),
@@ -2163,25 +2166,6 @@ class Shipping_Public {
         else wp_send_json_error('Failed to delete additional fee');
     }
 
-    public function ajax_get_special_offers() {
-        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
-        wp_send_json_success(Shipping_DB::get_special_offers());
-    }
-
-    public function ajax_add_special_offer() {
-        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
-        check_ajax_referer('shipping_pricing_action', 'nonce');
-        $res = Shipping_DB::add_special_offer($_POST);
-        if ($res) wp_send_json_success($res);
-        else wp_send_json_error('Failed to add special offer');
-    }
-
-    public function ajax_delete_special_offer() {
-        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
-        check_ajax_referer('shipping_pricing_action', 'nonce');
-        if (Shipping_DB::delete_special_offer(intval($_POST['id']))) wp_send_json_success();
-        else wp_send_json_error('Failed to delete special offer');
-    }
 
     public function ajax_estimate_cost() {
         if (!is_user_logged_in()) wp_send_json_error('Unauthorized');

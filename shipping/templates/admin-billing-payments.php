@@ -7,6 +7,9 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
     <button class="shipping-tab-btn <?php echo $sub == 'records' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('billing-records', this)">سجلات الدفع</button>
     <button class="shipping-tab-btn <?php echo $sub == 'balances' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('billing-balances', this)">الأرصدة</button>
     <button class="shipping-tab-btn <?php echo $sub == 'reports' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('billing-reports', this)">التقارير المالية</button>
+    <button class="shipping-tab-btn <?php echo $sub == 'calculator' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-calc', this)">حاسبة التكلفة</button>
+    <button class="shipping-tab-btn <?php echo $sub == 'pricing-rules' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-rules', this)">قواعد التسعير</button>
+    <button class="shipping-tab-btn <?php echo $sub == 'extra-charges' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('pricing-extra', this)">رسوم إضافية</button>
 </div>
 
 <!-- 2. Payment Records -->
@@ -27,7 +30,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                             <td>#<?php echo $p->transaction_id; ?></td>
                             <td><strong><?php echo $p->invoice_number; ?></strong></td>
                             <td><?php echo esc_html($p->customer_name); ?></td>
-                            <td style="color:#2f855a; font-weight:700;">+ <?php echo number_format($p->amount_paid, 2); ?> SAR</td>
+                            <td style="color:#2f855a; font-weight:700;">+ <?php echo number_format($p->amount_paid, 2); ?> <?php echo esc_html($currency); ?></td>
                             <td><?php echo $p->payment_method; ?></td>
                             <td><?php echo $p->payment_date; ?></td>
                         </tr>
@@ -130,7 +133,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                 <div style="position: absolute; bottom: 30px; left: 30px; right: 30px; border-top: 2px solid #edf2f7; padding-top: 15px;">
                     <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 16px;">
                         <span>الإجمالي المستحق:</span>
-                        <span id="preview-total">0.00 SAR</span>
+                        <span id="preview-total">0.00 <?php echo esc_html($currency); ?></span>
                     </div>
                 </div>
             </div>
@@ -155,7 +158,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                         <tr>
                             <td><strong><?php echo $inv->invoice_number; ?></strong></td>
                             <td><?php echo esc_html($inv->customer_name); ?></td>
-                            <td><?php echo number_format($inv->total_amount, 2); ?></td>
+                            <td><?php echo number_format($inv->total_amount, 2); ?> <?php echo esc_html($currency); ?></td>
                             <td style="color:<?php echo (strtotime($inv->due_date) < time()) ? '#e53e3e' : 'inherit'; ?>"><?php echo $inv->due_date; ?></td>
                             <td><span class="shipping-badge shipping-badge-low"><?php echo $inv->status; ?></span></td>
                             <td><button class="shipping-btn shipping-btn-outline" style="padding:5px 10px;" onclick="openPaymentModal(<?php echo htmlspecialchars(json_encode($inv)); ?>)">تسجيل دفع</button></td>
@@ -164,6 +167,151 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<!-- 5. Advanced Shipping Calculator -->
+<div id="pricing-calc" class="shipping-internal-tab" style="display: <?php echo $sub == 'calculator' ? 'block' : 'none'; ?>;">
+    <div class="shipping-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="shipping-card">
+            <h4 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">حاسبة التكلفة التقديرية</h4>
+            <form id="shipping-calculator-form-direct">
+                <div class="shipping-form-group">
+                    <label>الوزن (كجم)</label>
+                    <input type="number" step="0.1" name="weight" class="shipping-input" placeholder="0.0" required>
+                </div>
+                <div class="shipping-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div class="shipping-form-group"><label>الطول (سم)</label><input type="number" name="length" class="shipping-input" placeholder="0"></div>
+                    <div class="shipping-form-group"><label>العرض (سم)</label><input type="number" name="width" class="shipping-input" placeholder="0"></div>
+                    <div class="shipping-form-group"><label>الارتفاع (سم)</label><input type="number" name="height" class="shipping-input" placeholder="0"></div>
+                </div>
+                <div class="shipping-form-group">
+                    <label>المسافة (كم)</label>
+                    <input type="number" name="distance" class="shipping-input" placeholder="0" required>
+                </div>
+                <div class="shipping-form-group">
+                    <label>خيار السرعة</label>
+                    <select name="is_urgent" class="shipping-input">
+                        <option value="0">شحن عادي</option>
+                        <option value="1">شحن مستعجل (+)</option>
+                    </select>
+                </div>
+                <button type="submit" class="shipping-btn" style="width: 100%; height: 50px; font-size: 1.1em;">حساب التكلفة التقديرية</button>
+            </form>
+        </div>
+
+        <div id="calc-results-direct" class="shipping-card" style="display: none; background: #f0fdf4; border: 2px solid #bbf7d0;">
+            <h4 style="margin-top:0; color: #166534;">تحليل التكلفة المتوقعة</h4>
+            <div id="cost-breakdown-direct" style="margin-bottom: 20px;"></div>
+            <div style="text-align: center; padding: 20px; background: #fff; border-radius: 10px; border: 1px dashed #38a169;">
+                <span style="font-size: 0.9em; color: #666; display: block; margin-bottom: 5px;">إجمالي التكلفة التقديرية</span>
+                <span id="estimated-total-direct" style="font-size: 2.5em; font-weight: 900; color: #2f855a;">0.00</span>
+                <span style="font-size: 1.1em; font-weight: 700; color: #2f855a; margin-right: 5px;"><?php echo esc_html($currency); ?></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Pricing Rules -->
+<div id="pricing-rules" class="shipping-internal-tab" style="display: <?php echo $sub == 'pricing-rules' ? 'block' : 'none'; ?>;">
+    <div class="shipping-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h4>قواعد تسعير الشحن النشطة</h4>
+            <button class="shipping-btn" style="width:auto;" onclick="document.getElementById('modal-add-rule-direct').style.display='flex'">+ إضافة قاعدة جديدة</button>
+        </div>
+        <div class="shipping-table-container">
+            <table class="shipping-table">
+                <thead>
+                    <tr>
+                        <th>اسم الخدمة</th>
+                        <th>السعر الأساسي</th>
+                        <th>سعر الكجم</th>
+                        <th>الحد الأدنى</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="rules-table-direct">
+                    <!-- Data via AJAX -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Rule Modal -->
+<div id="modal-add-rule-direct" class="shipping-modal">
+    <div class="shipping-modal-content" style="max-width: 500px;">
+        <div class="shipping-modal-header">
+            <h4>إضافة قاعدة تسعير</h4>
+            <button onclick="document.getElementById('modal-add-rule-direct').style.display='none'">&times;</button>
+        </div>
+        <form id="form-rule-direct">
+            <input type="hidden" name="action" value="shipping_add_pricing">
+            <?php wp_nonce_field('shipping_pricing_action', 'nonce'); ?>
+            <div class="shipping-modal-body">
+                <div class="shipping-form-group"><label>اسم الخدمة:</label><input type="text" name="name" class="shipping-input" required></div>
+                <div class="shipping-form-group"><label>التكلفة الأساسية (<?php echo esc_html($currency); ?>):</label><input type="number" step="0.01" name="base_cost" class="shipping-input" required></div>
+                <div class="shipping-form-group"><label>تكلفة الكجم (<?php echo esc_html($currency); ?>):</label><input type="number" step="0.01" name="cost_per_kg" class="shipping-input" required></div>
+                <div class="shipping-form-group"><label>تكلفة الكم (<?php echo esc_html($currency); ?>):</label><input type="number" step="0.01" name="cost_per_km" class="shipping-input" required></div>
+                <div class="shipping-form-group"><label>الحد الأدنى (<?php echo esc_html($currency); ?>):</label><input type="number" step="0.01" name="min_cost" class="shipping-input" value="0"></div>
+            </div>
+            <div class="shipping-modal-footer"><button type="submit" class="shipping-btn">حفظ القاعدة</button></div>
+        </form>
+    </div>
+</div>
+
+<!-- 7. Additional Fees -->
+<div id="pricing-extra" class="shipping-internal-tab" style="display: <?php echo $sub == 'extra-charges' ? 'block' : 'none'; ?>;">
+    <div class="shipping-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h4>الرسوم والخدمات الإضافية</h4>
+            <button class="shipping-btn" style="width:auto; background:#38a169;" onclick="document.getElementById('modal-add-fee-direct').style.display='flex'">+ إضافة رسم جديد</button>
+        </div>
+        <div class="shipping-table-container">
+            <table class="shipping-table">
+                <thead>
+                    <tr>
+                        <th>اسم الرسم</th>
+                        <th>القيمة</th>
+                        <th>النوع</th>
+                        <th>التطبيق التلقائي</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="fees-table-direct">
+                    <!-- Data via AJAX -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Fee Modal -->
+<div id="modal-add-fee-direct" class="shipping-modal">
+    <div class="shipping-modal-content" style="max-width: 450px;">
+        <div class="shipping-modal-header">
+            <h4>إضافة رسم إضافي</h4>
+            <button onclick="document.getElementById('modal-add-fee-direct').style.display='none'">&times;</button>
+        </div>
+        <form id="form-fee-direct">
+            <input type="hidden" name="action" value="shipping_add_additional_fee">
+            <?php wp_nonce_field('shipping_pricing_action', 'nonce'); ?>
+            <div class="shipping-modal-body">
+                <div class="shipping-form-group"><label>اسم الرسم:</label><input type="text" name="fee_name" class="shipping-input" required></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div class="shipping-form-group"><label>القيمة:</label><input type="number" step="0.01" name="fee_value" class="shipping-input" required></div>
+                    <div class="shipping-form-group">
+                        <label>النوع:</label>
+                        <select name="fee_type" class="shipping-select">
+                            <option value="fixed">مبلغ ثابت</option>
+                            <option value="percentage">نسبة %</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="shipping-form-group"><label><input type="checkbox" name="is_automatic" value="1"> تطبيق تلقائي</label></div>
+            </div>
+            <div class="shipping-modal-footer"><button type="submit" class="shipping-btn">حفظ الرسم</button></div>
+        </form>
     </div>
 </div>
 
@@ -177,11 +325,11 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:30px;">
             <div style="background:#f0fff4; padding:20px; border-radius:12px; text-align:center; border:1px solid #c6f6d5;">
                 <h5 style="margin-top:0;">إيرادات اليوم</h5>
-                <div style="font-size:2em; font-weight:800; color:#2f855a;" id="today-revenue">0.00 SAR</div>
+                <div style="font-size:2em; font-weight:800; color:#2f855a;" id="today-revenue">0.00 <?php echo esc_html($currency); ?></div>
             </div>
             <div style="background:#ebf8ff; padding:20px; border-radius:12px; text-align:center; border:1px solid #bee3f8;">
                 <h5 style="margin-top:0;">إيرادات الشهر الحالي</h5>
-                <div style="font-size:2em; font-weight:800; color:#2b6cb0;" id="month-revenue">0.00 SAR</div>
+                <div style="font-size:2em; font-weight:800; color:#2b6cb0;" id="month-revenue">0.00 <?php echo esc_html($currency); ?></div>
             </div>
         </div>
     </div>
@@ -258,7 +406,7 @@ function updatePreview() {
         }
     });
     tbody.innerHTML = rowsFound ? html : '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #a0aec0;">أضف بنوداً لعرض المعاينة</td></tr>';
-    document.getElementById('preview-total').innerText = document.getElementById('invoice-total').innerText + ' SAR';
+    document.getElementById('preview-total').innerText = document.getElementById('invoice-total').innerText + ' ' + '<?php echo esc_js($currency); ?>';
 }
 
 function importShipmentToInvoice() {
@@ -344,6 +492,102 @@ document.getElementById('shipping-payment-form')?.addEventListener('submit', fun
 
 window.onload = function() {
     addInvoiceRow();
+    loadRulesDirect();
+    loadFeesDirect();
+
+    document.getElementById('shipping-calculator-form-direct')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const fd = new FormData(this);
+        fd.append('action', 'shipping_estimate_cost');
+        fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
+            if (res.success) {
+                const data = res.data;
+                document.getElementById('calc-results-direct').style.display = 'block';
+                document.getElementById('estimated-total-direct').innerText = data.total_cost.toFixed(2);
+                let html = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
+                html += `<li style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>أساسي:</span> <strong>${data.breakdown.base.toFixed(2)}</strong></li>`;
+                html += `<li style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>وزن:</span> <strong>${data.breakdown.weight.toFixed(2)}</strong></li>`;
+                html += `<li style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>مسافة:</span> <strong>${data.breakdown.distance.toFixed(2)}</strong></li>`;
+                html += '</ul>';
+                document.getElementById('cost-breakdown-direct').innerHTML = html;
+            }
+        });
+    });
+
+    document.getElementById('form-rule-direct')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        fetch(ajaxurl, { method: 'POST', body: new FormData(this) }).then(r => r.json()).then(res => {
+            if (res.success) {
+                document.getElementById('modal-add-rule-direct').style.display = 'none';
+                this.reset();
+                loadRulesDirect();
+            }
+        });
+    });
+
+    document.getElementById('form-fee-direct')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        fetch(ajaxurl, { method: 'POST', body: new FormData(this) }).then(r => r.json()).then(res => {
+            if (res.success) {
+                document.getElementById('modal-add-fee-direct').style.display = 'none';
+                this.reset();
+                loadFeesDirect();
+            }
+        });
+    });
+
+    function loadRulesDirect() {
+        fetch(ajaxurl + '?action=shipping_get_pricing_rules').then(r => r.json()).then(res => {
+            const body = document.getElementById('rules-table-direct');
+            if(!body) return;
+            if (!res.data.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد قواعد</td></tr>'; return; }
+            body.innerHTML = res.data.map(r => `
+                <tr>
+                    <td><strong>${r.name}</strong></td>
+                    <td>${parseFloat(r.base_cost).toFixed(2)} <?php echo esc_js($currency); ?></td>
+                    <td>${parseFloat(r.cost_per_kg).toFixed(2)} / كجم</td>
+                    <td>${parseFloat(r.min_cost).toFixed(2)} <?php echo esc_js($currency); ?></td>
+                    <td><button class="shipping-btn" style="background:#e53e3e; padding:4px 8px; font-size:11px;" onclick="deleteRuleDirect(${r.id})">حذف</button></td>
+                </tr>
+            `).join('');
+        });
+    }
+
+    window.deleteRuleDirect = function(id) {
+        if(!confirm('حذف القاعدة؟')) return;
+        const fd = new FormData();
+        fd.append('action', 'shipping_delete_pricing_rule');
+        fd.append('id', id);
+        fd.append('nonce', '<?php echo wp_create_nonce("shipping_pricing_action"); ?>');
+        fetch(ajaxurl, { method: 'POST', body: fd }).then(() => loadRulesDirect());
+    };
+
+    function loadFeesDirect() {
+        fetch(ajaxurl + '?action=shipping_get_additional_fees').then(r => r.json()).then(res => {
+            const body = document.getElementById('fees-table-direct');
+            if(!body) return;
+            if (!res.data.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد رسوم</td></tr>'; return; }
+            body.innerHTML = res.data.map(f => `
+                <tr>
+                    <td>${f.fee_name}</td>
+                    <td>${parseFloat(f.fee_value).toFixed(2)}${f.fee_type === 'percentage' ? '%' : ' ' + '<?php echo esc_js($currency); ?>'}</td>
+                    <td>${f.fee_type === 'percentage' ? 'نسبة' : 'ثابت'}</td>
+                    <td>${f.is_automatic == 1 ? 'نعم' : 'لا'}</td>
+                    <td><button class="shipping-btn" style="background:#e53e3e; padding:4px 8px; font-size:11px;" onclick="deleteFeeDirect(${f.id})">حذف</button></td>
+                </tr>
+            `).join('');
+        });
+    }
+
+    window.deleteFeeDirect = function(id) {
+        if(!confirm('حذف الرسم؟')) return;
+        const fd = new FormData();
+        fd.append('action', 'shipping_delete_additional_fee');
+        fd.append('id', id);
+        fd.append('nonce', '<?php echo wp_create_nonce("shipping_pricing_action"); ?>');
+        fetch(ajaxurl, { method: 'POST', body: fd }).then(() => loadFeesDirect());
+    };
+
     const ctx = document.getElementById('revenueChart')?.getContext('2d');
     if(ctx) {
         fetch(ajaxurl + '?action=shipping_get_billing_report')
@@ -354,8 +598,8 @@ window.onload = function() {
                 const labels = stats.monthly.map(s => s.month);
                 const data = stats.monthly.map(s => s.total);
 
-                document.getElementById('today-revenue').innerText = stats.summary.today.toFixed(2) + ' SAR';
-                document.getElementById('month-revenue').innerText = stats.summary.month.toFixed(2) + ' SAR';
+                document.getElementById('today-revenue').innerText = stats.summary.today.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
+                document.getElementById('month-revenue').innerText = stats.summary.month.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
 
                 new Chart(ctx, {
                     type: 'line',

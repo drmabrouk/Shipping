@@ -512,20 +512,6 @@ class Shipping_Activator {
             PRIMARY KEY  (id)
         ) $charset_collate;\n";
 
-        // Special Offers
-        $table_name = $wpdb->prefix . 'shipping_special_offers';
-        $sql .= "CREATE TABLE $table_name (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            offer_name varchar(255) NOT NULL,
-            promo_code varchar(50),
-            discount_type enum('fixed', 'percentage') DEFAULT 'percentage',
-            discount_value decimal(10,2) NOT NULL,
-            start_date date,
-            end_date date,
-            is_active tinyint(1) DEFAULT 1,
-            PRIMARY KEY  (id)
-        ) $charset_collate;\n";
-
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
 
@@ -596,10 +582,6 @@ class Shipping_Activator {
         // 7. Additional Fees (2)
         $wpdb->insert("{$wpdb->prefix}shipping_additional_fees", ['fee_name' => 'ضريبة القيمة المضافة', 'fee_type' => 'percentage', 'fee_value' => 15.00, 'is_automated' => 1]);
         $wpdb->insert("{$wpdb->prefix}shipping_additional_fees", ['fee_name' => 'رسوم وقود متغيرة', 'fee_type' => 'fixed', 'fee_value' => 5.00, 'is_automated' => 1]);
-
-        // 8. Special Offers (2)
-        $wpdb->insert("{$wpdb->prefix}shipping_special_offers", ['offer_name' => 'خصم الافتتاح', 'promo_code' => 'WELCOME10', 'discount_type' => 'percentage', 'discount_value' => 10.00, 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d', strtotime('+1 month'))]);
-        $wpdb->insert("{$wpdb->prefix}shipping_special_offers", ['offer_name' => 'كوبون الشتاء', 'promo_code' => 'WINTER', 'discount_type' => 'fixed', 'discount_value' => 25.00, 'start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d', strtotime('+3 months'))]);
 
         // 9. Orders (4)
         $wpdb->insert("{$wpdb->prefix}shipping_orders", ['order_number' => 'ORD-TEST001', 'customer_id' => 1, 'total_amount' => 150.00, 'status' => 'new', 'pickup_address' => 'الرياض، حي الملقا', 'delivery_address' => 'الدمام، حي الزهور']);

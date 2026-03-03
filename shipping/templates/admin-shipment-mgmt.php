@@ -86,8 +86,42 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                             ?>
                         </select>
                     </div>
-                    <div class="shipping-form-group"><label>نقطة الانطلاق:</label><input type="text" name="origin" class="shipping-input" required></div>
-                    <div class="shipping-form-group"><label>نقطة الوصول:</label><input type="text" name="destination" class="shipping-input" required></div>
+                    <div class="shipping-form-group">
+                        <label>دولة الانطلاق:</label>
+                        <select name="origin_country" class="shipping-select origin-country-select" required onchange="shippingUpdateCities(this, 'origin-city-select')">
+                            <option value="">اختر الدولة...</option>
+                            <option value="Saudi Arabia" selected>السعودية</option>
+                            <option value="UAE">الإمارات</option>
+                            <option value="Egypt">مصر</option>
+                            <option value="Oman">عمان</option>
+                            <option value="Qatar">قطر</option>
+                            <option value="Jordan">الأردن</option>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>مدينة الانطلاق:</label>
+                        <select name="origin_city" class="shipping-select origin-city-select" required>
+                            <option value="">اختر المدينة...</option>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>دولة الوصول:</label>
+                        <select name="destination_country" class="shipping-select destination-country-select" required onchange="shippingUpdateCities(this, 'destination-city-select')">
+                            <option value="">اختر الدولة...</option>
+                            <option value="Saudi Arabia" selected>السعودية</option>
+                            <option value="UAE">الإمارات</option>
+                            <option value="Egypt">مصر</option>
+                            <option value="Oman">عمان</option>
+                            <option value="Qatar">قطر</option>
+                            <option value="Jordan">الأردن</option>
+                        </select>
+                    </div>
+                    <div class="shipping-form-group">
+                        <label>مدينة الوصول:</label>
+                        <select name="destination_city" class="shipping-select destination-city-select" required>
+                            <option value="">اختر المدينة...</option>
+                        </select>
+                    </div>
 
                     <div class="shipping-form-group">
                         <label>الوزن (كجم):</label>
@@ -156,7 +190,7 @@ $sub = $_GET['sub'] ?? 'create-shipment';
                         <div style="text-align: center; padding: 20px; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e0; margin-bottom: 20px;">
                             <div style="font-size: 0.8em; color: #718096;">التكلفة المتوقعة</div>
                             <div style="font-size: 2em; font-weight: 900; color: var(--shipping-primary-color);" id="display-cost">0.00</div>
-                            <div style="font-weight: 700; color: #4a5568; font-size: 12px;">SAR</div>
+                            <div style="font-weight: 700; color: #4a5568; font-size: 12px;"><?php echo esc_html($currency); ?></div>
                         </div>
                         <div id="cost-breakdown-list" style="font-size: 12px; color: #4a5568;">
                             <p style="text-align: center; opacity: 0.7;">أدخل بيانات الشحنة للحساب.</p>
@@ -359,8 +393,32 @@ $sub = $_GET['sub'] ?? 'create-shipment';
 </div>
 
 <script>
+const arabCities = {
+    "Saudi Arabia": ["الرياض", "جدة", "الدمام", "مكة المكرمة", "المدينة المنورة", "الخبر"],
+    "UAE": ["دبي", "أبو ظبي", "الشارقة", "عجمان", "العين"],
+    "Egypt": ["القاهرة", "الإسكندرية", "الجيزة", "بورسعيد", "المنصورة"],
+    "Oman": ["مسقط", "صلالة", "صحار", "نزوى"],
+    "Qatar": ["الدوحة", "الريان", "الوكرة", "الخور"],
+    "Jordan": ["عمان", "إربد", "الزرقاء", "العقبة"]
+};
+
+function shippingUpdateCities(countrySelect, citySelectClass) {
+    const country = countrySelect.value;
+    const citySelects = document.querySelectorAll('.' + citySelectClass);
+    const cities = arabCities[country] || [];
+
+    citySelects.forEach(select => {
+        select.innerHTML = '<option value="">اختر المدينة...</option>' +
+            cities.map(c => `<option value="${c}">${c}</option>`).join('');
+    });
+}
+
 window.openShipmentCreationModal = function() {
     document.getElementById('modal-create-shipment').style.display = 'flex';
+    // Trigger initial city load for defaults
+    document.querySelectorAll('.origin-country-select, .destination-country-select').forEach(s => {
+        shippingUpdateCities(s, s.name.includes('origin') ? 'origin-city-select' : 'destination-city-select');
+    });
 };
 
 let costTimeout;
@@ -511,7 +569,7 @@ function viewFullDossier(id) {
                     ${d.invoice ? `
                         <div style="margin-top:10px; padding:10px; background:#f0fff4; border-radius:8px;">
                             <strong>الفاتورة:</strong> ${d.invoice.invoice_number}<br>
-                            <strong>المبلغ:</strong> ${parseFloat(d.invoice.total_amount).toFixed(2)} SAR<br>
+                            <strong>المبلغ:</strong> ${parseFloat(d.invoice.total_amount).toFixed(2)} <?php echo esc_js($currency); ?><br>
                             <strong>الحالة:</strong> <span class="shipping-badge">${d.invoice.status}</span>
                         </div>
                     ` : '<div style="color:#718096;">لا توجد فاتورة مصدرة حالياً</div>'}
@@ -523,7 +581,7 @@ function viewFullDossier(id) {
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:10px;">
                     <div>
                         <div style="font-size:13px; margin-bottom:10px;"><strong>الحالة الجمركية:</strong> ${d.customs ? d.customs.clearance_status : 'لا توجد بيانات'}</div>
-                        <div style="font-size:13px;"><strong>الرسوم:</strong> ${d.customs ? d.customs.duties_amount : '0.00'} SAR</div>
+                        <div style="font-size:13px;"><strong>الرسوم:</strong> ${d.customs ? d.customs.duties_amount : '0.00'} <?php echo esc_js($currency); ?></div>
                     </div>
                     <div>
                         <strong>المستندات المرفوعة:</strong>
@@ -585,8 +643,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (f) {
                     document.getElementById('shipment-order-id-input').value = orderId;
                     f.customer_id.value = o.customer_id;
-                    f.origin.value = o.pickup_address;
-                    f.destination.value = o.delivery_address;
+                    // Note: automatic address parsing from textarea to dropdowns omitted for stability
 
                     // Trigger cost calculation if weight is set
                     if (f.weight.value > 0) calculateRealtimeCost();
