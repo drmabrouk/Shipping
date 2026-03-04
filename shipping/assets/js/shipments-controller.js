@@ -18,12 +18,179 @@ window.ShipmentsController = {
     },
 
     quickTrack(number, id, btn) {
-        const input = document.getElementById('track-number');
-        if (input) input.value = number;
         ShippingState.setShipment(id);
-        const tabsBtn = btn.closest('.shipping-admin-layout').querySelector('.shipping-tab-btn:nth-child(2)');
-        shippingOpenInternalTab('shipment-tracking', tabsBtn);
-        this.trackShipment();
+        document.getElementById('res-number-unified').innerText = 'جاري التحميل...';
+        document.getElementById('res-timeline-unified').innerHTML = '';
+        ShippingModal.open('modal-shipment-tracking-unified');
+
+        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + encodeURIComponent(number) + '&nonce=' + shippingVars.shipmentNonce)
+        .then(r => r.json()).then(res => {
+            if (res.success) {
+                const s = res.data;
+                document.getElementById('res-number-unified').innerText = s.shipment_number;
+                document.getElementById('res-status-unified').innerText = s.status;
+                document.getElementById('res-route-unified').innerText = s.origin + ' ← ' + s.destination;
+
+                let timelineHtml = '';
+                if (s.events && s.events.length > 0) {
+                    s.events.forEach((ev, idx) => {
+                        timelineHtml += `
+                            <div class="tracking-event ${idx === 0 ? 'active' : ''}">
+                                <div style="font-weight:700; color:var(--shipping-dark-color);">${ev.status}</div>
+                                <div style="font-size:12px; color:#64748b;">${ev.created_at} - ${ev.location || ''}</div>
+                                <div style="font-size:13px; margin-top:5px;">${ev.description || ''}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    timelineHtml = '<p>لا توجد أحداث تتبع مسجلة.</p>';
+                }
+                document.getElementById('res-timeline-unified').innerHTML = timelineHtml;
+            } else alert('لم يتم العثور على الشحنة');
+        });
+    },
+
+    filterShipments() {
+        const query = document.getElementById('shipment-search-query').value.toLowerCase();
+        const status = document.getElementById('shipment-filter-status').value;
+        const sort = document.getElementById('shipment-sort-order').value;
+        const rows = Array.from(document.querySelectorAll('.shipment-row'));
+
+        rows.forEach(row => {
+            const text = (row.dataset.number + row.dataset.customer).toLowerCase();
+            const rowStatus = row.dataset.status;
+            const matchesQuery = !query || text.includes(query);
+            const matchesStatus = !status || rowStatus === status;
+            row.style.display = (matchesQuery && matchesStatus) ? '' : 'none';
+        });
+
+        // Sorting
+        const tbody = document.getElementById('shipments-list-body');
+        const sortedRows = rows.sort((a, b) => {
+            if (sort === 'newest') return new Date(b.dataset.created) - new Date(a.dataset.created);
+            if (sort === 'oldest') return new Date(a.dataset.created) - new Date(b.dataset.created);
+            if (sort === 'weight_desc') return parseFloat(b.dataset.weight) - parseFloat(a.dataset.weight);
+            if (sort === 'weight_asc') return parseFloat(a.dataset.weight) - parseFloat(b.dataset.weight);
+            return 0;
+        });
+        sortedRows.forEach(row => tbody.appendChild(row));
+    },
+
+    resetFilters() {
+        document.getElementById('shipment-search-form').reset();
+        this.filterShipments();
+    },
+
+    printInvoice(id) {
+        const modal = document.getElementById('modal-shipment-invoice-print');
+        const container = document.getElementById('invoice-print-content');
+        container.innerHTML = '<div style="text-align:center; padding:50px;"><span class="dashicons dashicons-update spin" style="font-size:40px; width:40px; height:40px;"></span><br>جاري تحضير الفاتورة...</div>';
+        ShippingModal.open('modal-shipment-invoice-print');
+
+        fetch(ajaxurl + '?action=shipping_get_shipment_full_details&id=' + id + '&nonce=' + shippingVars.shipmentNonce)
+        .then(r => r.json()).then(res => {
+            if (!res.success) { alert(res.data); return; }
+            const d = res.data;
+            const invoice = d.invoice;
+
+            if (!invoice) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:40px; background:#fff; border-radius:12px; border:1px dashed #cbd5e0;">
+                        <span class="dashicons dashicons-warning" style="font-size:48px; width:48px; height:48px; color:#e53e3e;"></span>
+                        <h3 style="margin:15px 0;">لا توجد فاتورة مصدرة لهذه الشحنة</h3>
+                        <p style="color:#64748b; margin-bottom:20px;">يرجى إصدار فاتورة من قسم الحسابات أولاً ليتم عرضها هنا.</p>
+                        <button class="shipping-btn" style="width:auto;" onclick="window.location.href='${window.shippingAdminUrl}&shipping_tab=billing-payments&sub=invoice-gen'">انتقل لإصدار فاتورة</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const items = JSON.parse(invoice.items_json || '[]');
+            let itemsHtml = items.map(item => `
+                <tr style="border-bottom:1px solid #edf2f7;">
+                    <td style="padding:12px;">${item.description}</td>
+                    <td style="padding:12px; text-align:center;">${item.quantity}</td>
+                    <td style="padding:12px; text-align:left;">${parseFloat(item.price).toFixed(2)}</td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <div id="printable-invoice-direct" style="background:#fff; padding:40px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.05); font-family:'Rubik', sans-serif;" dir="rtl">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px;">
+                        <div>
+                            <h2 style="margin:0; color:var(--shipping-dark-color);">فاتورة ضريبية</h2>
+                            <div style="font-size:14px; color:#718096; margin-top:5px;">رقم الفاتورة: <strong>${invoice.invoice_number}</strong></div>
+                        </div>
+                        <div style="text-align:left;">
+                            <strong>التاريخ:</strong> ${invoice.created_at}<br>
+                            <strong>الحالة:</strong> <span style="color:${invoice.status === 'paid' ? '#38a169' : '#e53e3e'}; font-weight:800;">${invoice.status.toUpperCase()}</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:30px; padding-bottom:20px; border-bottom:2px solid #f7fafc;">
+                        <strong>بيانات العميل:</strong><br>
+                        ${d.shipment.customer_name}<br>
+                        ${d.shipment.customer_phone || ''}
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+                        <thead><tr style="background:#f7fafc; text-align:right;"><th style="padding:12px;">الوصف</th><th style="padding:12px; text-align:center;">الكمية</th><th style="padding:12px; text-align:left;">السعر (SAR)</th></tr></thead>
+                        <tbody>${itemsHtml}</tbody>
+                    </table>
+                    <div style="width:250px; margin-right:auto; text-align:left; border-top:2px solid var(--shipping-primary-color); padding-top:15px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>المجموع الفرعي:</span> <strong>${parseFloat(invoice.subtotal).toFixed(2)}</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>الضريبة (15%):</span> <strong>${parseFloat(invoice.tax_amount).toFixed(2)}</strong></div>
+                        <div style="display:flex; justify-content:space-between; font-size:1.3em; font-weight:900; color:var(--shipping-primary-color); margin-top:10px;"><span>الإجمالي:</span> <strong>${parseFloat(invoice.total_amount).toFixed(2)}</strong></div>
+                    </div>
+                    <div style="margin-top:50px; text-align:center; font-size:11px; color:#a0aec0; border-top:1px solid #eee; padding-top:20px;">
+                        هذه فاتورة صادرة آلياً من نظام الشحن والمتابعة الموحد
+                    </div>
+                </div>
+            `;
+        });
+    },
+
+    executePrint() {
+        const content = document.getElementById('printable-invoice-direct');
+        if (!content) return;
+        const win = window.open('', '_blank');
+        win.document.write('<html><head><title>Print Invoice</title>');
+        win.document.write('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap">');
+        win.document.write('<style>body{font-family:"Rubik", sans-serif; padding:20px;} @media print{.no-print{display:none;}}</style>');
+        win.document.write('</head><body>');
+        win.document.write(content.innerHTML);
+        win.document.write('</body></html>');
+        win.document.close();
+        setTimeout(() => { win.print(); win.close(); }, 500);
+    },
+
+    processBulkDirect() {
+        const rowsRaw = document.getElementById('bulk-rows-input').value;
+        if (!rowsRaw) return alert('يرجى إدخال البيانات');
+        try { JSON.parse(rowsRaw); } catch(e) { return alert('تنسيق JSON غير صحيح'); }
+
+        const fd = new FormData();
+        fd.append('action', 'shipping_bulk_shipments');
+        fd.append('nonce', shippingVars.shipmentNonce);
+        fd.append('rows', rowsRaw);
+
+        fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
+            if (res.success) {
+                shippingShowNotification('تمت معالجة ' + res.data + ' شحنة بنجاح');
+                location.reload();
+            } else alert(res.data);
+        });
+    },
+
+    openEditModal(s) {
+        // Simple mapping for now, assuming creation form can be reused or specialized
+        const f = document.getElementById('shipping-create-shipment-form');
+        if (!f) return;
+        f.customer_id.value = s.customer_id;
+        f.weight.value = s.weight;
+        f.classification.value = s.classification;
+        // ... (Would need to handle country/city split if needed)
+        ShippingModal.open('modal-create-shipment');
+        // Update title to Edit
+        document.querySelector('#modal-create-shipment h3').innerText = 'تعديل بيانات الشحنة: ' + s.shipment_number;
     },
 
     setupEventListeners() {
@@ -90,7 +257,7 @@ window.ShipmentsController = {
     },
 
     loadOrderDataForShipment(orderId) {
-        fetch(ajaxurl + '?action=shipping_get_orders&id=' + orderId)
+        fetch(ajaxurl + '?action=shipping_get_orders&id=' + orderId + '&nonce=' + shippingVars.orderNonce)
         .then(r => r.json()).then(res => {
             if (res.success && res.data.length) {
                 const o = res.data[0];
@@ -121,6 +288,7 @@ window.ShipmentsController = {
 
         const fd = new FormData(form);
         fd.append('action', 'shipping_estimate_cost');
+        fd.append('nonce', shippingVars.nonce);
 
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
@@ -149,6 +317,7 @@ window.ShipmentsController = {
         const form = e.target;
         const fd = new FormData(form);
         fd.append('action', 'shipping_create_shipment');
+        fd.append('nonce', shippingVars.shipmentNonce);
 
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
             if (res.success) {
@@ -164,7 +333,7 @@ window.ShipmentsController = {
         const num = document.getElementById('track-number').value;
         if (!num) return alert('يرجى إدخال رقم الشحنة');
 
-        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + encodeURIComponent(num))
+        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + encodeURIComponent(num) + '&nonce=' + shippingVars.shipmentNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const s = res.data;
@@ -198,7 +367,7 @@ window.ShipmentsController = {
         container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:50px;"><span class="dashicons dashicons-update spin" style="font-size:40px; width:40px; height:40px;"></span><br>جاري تجميع ملف البيانات...</div>';
         ShippingModal.open('modal-full-dossier');
 
-        fetch(ajaxurl + '?action=shipping_get_shipment_full_details&id=' + id)
+        fetch(ajaxurl + '?action=shipping_get_shipment_full_details&id=' + id + '&nonce=' + shippingVars.shipmentNonce)
         .then(r => r.json()).then(res => {
             if (!res.success) { alert(res.data); return; }
             const d = res.data;
@@ -248,7 +417,7 @@ window.ShipmentsController = {
         container.innerHTML = '<p style="text-align:center;">جاري تحميل السجل...</p>';
         ShippingModal.open('modal-shipment-logs');
 
-        fetch(ajaxurl + '?action=shipping_get_shipment_logs&id=' + id)
+        fetch(ajaxurl + '?action=shipping_get_shipment_logs&id=' + id + '&nonce=' + shippingVars.shipmentNonce)
         .then(r => r.json()).then(res => {
             if (!res.data.length) { container.innerHTML = '<p>لا توجد سجلات لهذه الشحنة</p>'; return; }
             container.innerHTML = res.data.map(l => `
@@ -272,6 +441,7 @@ window.ShipmentsController = {
 
         const fd = new FormData();
         fd.append('action', 'shipping_bulk_shipments');
+        fd.append('nonce', shippingVars.shipmentNonce);
         fd.append('rows', rowsRaw);
 
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {

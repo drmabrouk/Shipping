@@ -41,28 +41,29 @@ window.LogisticsController = {
 
     setupEventListeners() {
         // Warehouse forms
-        this.bindForm('form-warehouse', 'shipping_add_warehouse', () => this.loadWarehouses());
-        this.bindForm('form-inventory', 'shipping_add_inventory_item', () => this.loadInventory(document.getElementById('inventory-warehouse-id').value));
+        this.bindForm('form-warehouse', 'shipping_add_warehouse', () => this.loadWarehouses(), shippingVars.logisticNonce);
+        this.bindForm('form-inventory', 'shipping_add_inventory_item', () => this.loadInventory(document.getElementById('inventory-warehouse-id').value), shippingVars.logisticNonce);
 
         // Route forms
-        this.bindForm('form-route', 'shipping_add_route', () => this.loadRoutes());
-        this.bindForm('form-stop', 'shipping_add_route_stop', () => this.loadStops(document.getElementById('stop-route-id').value));
+        this.bindForm('form-route', 'shipping_add_route', () => this.loadRoutes(), shippingVars.logisticNonce);
+        this.bindForm('form-stop', 'shipping_add_route_stop', () => this.loadStops(document.getElementById('stop-route-id').value), shippingVars.logisticNonce);
 
         // Fleet forms
-        this.bindForm('form-vehicle', 'shipping_add_vehicle', () => this.loadFleet());
-        this.bindForm('form-maintenance', 'shipping_add_maintenance_log', () => this.loadMaintenance(document.getElementById('maintenance-vehicle-id').value));
+        this.bindForm('form-vehicle', 'shipping_add_vehicle', () => this.loadFleet(), shippingVars.logisticNonce);
+        this.bindForm('form-maintenance', 'shipping_add_maintenance_log', () => this.loadMaintenance(document.getElementById('maintenance-vehicle-id').value), shippingVars.logisticNonce);
 
         // Tracking update form
-        this.bindForm('form-update-location', 'shipping_update_shipment_location', () => this.loadActiveShipments());
+        this.bindForm('form-update-location', 'shipping_update_shipment_location', () => this.loadActiveShipments(), shippingVars.shipmentNonce);
     },
 
-    bindForm(formId, action, callback) {
+    bindForm(formId, action, callback, nonce) {
         const form = document.getElementById(formId);
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const fd = new FormData(form);
                 if (!fd.has('action')) fd.append('action', action);
+                if (nonce) fd.append('nonce', nonce);
 
                 fetch(ajaxurl, { method: 'POST', body: fd })
                 .then(r => r.json()).then(res => {
@@ -90,7 +91,7 @@ window.LogisticsController = {
     },
 
     loadActiveShipments() {
-        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&id=all')
+        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&id=all&nonce=' + shippingVars.shipmentNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const tableBody = document.getElementById('active-shipments-list');
@@ -149,7 +150,7 @@ window.LogisticsController = {
 
     // --- Warehouses ---
     loadWarehouses() {
-        fetch(ajaxurl + '?action=shipping_get_warehouses')
+        fetch(ajaxurl + '?action=shipping_get_warehouses&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const container = document.getElementById('warehouse-list-container');
@@ -183,7 +184,7 @@ window.LogisticsController = {
     },
 
     loadInventory(warehouseId) {
-        fetch(ajaxurl + '?action=shipping_get_inventory&warehouse_id=' + warehouseId)
+        fetch(ajaxurl + '?action=shipping_get_inventory&warehouse_id=' + warehouseId + '&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const body = document.getElementById('inventory-list-body');
@@ -238,7 +239,7 @@ window.LogisticsController = {
 
     // --- Routes ---
     loadRoutes() {
-        fetch(ajaxurl + '?action=shipping_get_routes')
+        fetch(ajaxurl + '?action=shipping_get_routes&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const body = document.getElementById('route-list-body');
@@ -270,7 +271,7 @@ window.LogisticsController = {
     },
 
     loadStops(routeId) {
-        fetch(ajaxurl + '?action=shipping_get_route_stops&route_id=' + routeId)
+        fetch(ajaxurl + '?action=shipping_get_route_stops&route_id=' + routeId + '&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const body = document.getElementById('stops-list-body');
@@ -326,7 +327,7 @@ window.LogisticsController = {
 
     // --- Fleet ---
     loadFleet() {
-        fetch(ajaxurl + '?action=shipping_get_fleet')
+        fetch(ajaxurl + '?action=shipping_get_fleet&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const container = document.getElementById('fleet-list-container');
@@ -362,7 +363,7 @@ window.LogisticsController = {
     },
 
     loadMaintenance(vehicleId) {
-        fetch(ajaxurl + '?action=shipping_get_maintenance_logs&vehicle_id=' + vehicleId)
+        fetch(ajaxurl + '?action=shipping_get_maintenance_logs&vehicle_id=' + vehicleId + '&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const body = document.getElementById('maintenance-list-body');
@@ -383,7 +384,7 @@ window.LogisticsController = {
     },
 
     loadVehicleShipments(vehicleId) {
-        fetch(ajaxurl + '?action=shipping_get_vehicle_shipments&vehicle_id=' + vehicleId)
+        fetch(ajaxurl + '?action=shipping_get_vehicle_shipments&vehicle_id=' + vehicleId + '&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             const body = document.getElementById('vehicle-shipments-body');
             if (!body) return;
@@ -438,7 +439,7 @@ window.LogisticsController = {
 
     // --- Analytics ---
     loadAnalytics() {
-        fetch(ajaxurl + '?action=shipping_get_logistics_analytics')
+        fetch(ajaxurl + '?action=shipping_get_logistics_analytics&nonce=' + shippingVars.logisticNonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const data = res.data;
@@ -490,7 +491,7 @@ window.LogisticsController = {
         const number = document.getElementById('history-shipment-number').value;
         if (!number) return;
 
-        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + number)
+        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + number + '&nonce=' + shippingVars.shipmentNonce)
         .then(r => r.json()).then(res => {
             const body = document.getElementById('history-list-body');
             if (!body) return;

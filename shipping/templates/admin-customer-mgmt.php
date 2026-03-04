@@ -18,7 +18,8 @@ $sub = $_GET['sub'] ?? 'profiles';
 <div id="customer-profiles" class="shipping-internal-tab" style="display: <?php echo $sub == 'profiles' ? 'block' : 'none'; ?>;">
     <?php
     global $wpdb;
-    $customers = $wpdb->get_results("SELECT *, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers ORDER BY id DESC");
+    // Strictly manage Customers (Subscribers)
+    $customers = $wpdb->get_results("SELECT c.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_customers c JOIN {$wpdb->prefix}users u ON c.wp_user_id = u.ID JOIN {$wpdb->prefix}usermeta um ON u.ID = um.user_id WHERE um.meta_key = '{$wpdb->prefix}capabilities' AND um.meta_value LIKE '%subscriber%' ORDER BY c.id DESC");
     ?>
     <div class="shipping-card">
         <div style="display:flex; justify-content:space-between; margin-bottom:15px;">

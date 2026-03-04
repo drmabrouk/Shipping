@@ -7,11 +7,80 @@ class Shipping_DB {
         $default_args = array(
             'role__in' => array('administrator', 'subscriber'),
             'number' => 20,
-            'offset' => 0
+            'offset' => 0,
+            'orderby' => 'display_name',
+            'order' => 'ASC'
         );
 
         $args = wp_parse_args($args, $default_args);
         return get_users($args);
+    }
+
+    public static function save_user($data) {
+        global $wpdb;
+        $user_id = !empty($data['id']) ? intval($data['id']) : 0;
+        $role = sanitize_text_field($data['role'] ?? 'subscriber');
+        $username = sanitize_user($data['user_login'] ?? '');
+        $email = sanitize_email($data['user_email'] ?? '');
+        $first_name = sanitize_text_field($data['first_name'] ?? '');
+        $last_name = sanitize_text_field($data['last_name'] ?? '');
+        $display_name = trim($first_name . ' ' . $last_name);
+        $pass = !empty($data['user_pass']) ? $data['user_pass'] : '';
+
+        $user_args = [
+            'user_email' => $email,
+            'display_name' => $display_name,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+        ];
+
+        if ($user_id) {
+            $user_args['ID'] = $user_id;
+            if ($pass) $user_args['user_pass'] = $pass;
+            $user_id = wp_update_user($user_args);
+        } else {
+            $user_args['user_login'] = $username;
+            if (!$pass) $pass = wp_generate_password(12, false);
+            $user_args['user_pass'] = $pass;
+            $user_id = wp_insert_user($user_args);
+            if (!is_wp_error($user_id)) {
+                update_user_meta($user_id, 'shipping_temp_pass', $pass);
+            }
+        }
+
+        if (is_wp_error($user_id)) return $user_id;
+
+        $u = new WP_User($user_id);
+        $u->set_role($role);
+
+        update_user_meta($user_id, 'shipping_phone', sanitize_text_field($data['phone'] ?? ''));
+        update_user_meta($user_id, 'shippingCustomerIdAttr', sanitize_text_field($data['officer_id'] ?? ''));
+        update_user_meta($user_id, 'shipping_account_status', sanitize_text_field($data['account_status'] ?? 'active'));
+
+        // Unified link to shipping_customers if role is subscriber
+        if ($role === 'subscriber') {
+            $customer_exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}shipping_customers WHERE wp_user_id = %d", $user_id));
+            $customer_data = [
+                'username' => $username ?: $u->user_login,
+                'first_name' => $first_name,
+                'last_name' => $last_name,
+                'email' => $email,
+                'phone' => sanitize_text_field($data['phone'] ?? ''),
+                'wp_user_id' => $user_id,
+                'account_status' => sanitize_text_field($data['account_status'] ?? 'active'),
+                'id_number' => sanitize_text_field($data['id_number'] ?? $data['officer_id'] ?? '')
+            ];
+
+            if ($customer_exists) {
+                $wpdb->update("{$wpdb->prefix}shipping_customers", $customer_data, ['wp_user_id' => $user_id]);
+            } else {
+                $customer_data['registration_date'] = current_time('Y-m-d');
+                $customer_data['sort_order'] = self::get_next_sort_order();
+                $wpdb->insert("{$wpdb->prefix}shipping_customers", $customer_data);
+            }
+        }
+
+        return $user_id;
     }
 
     public static function get_customers($args = array()) {

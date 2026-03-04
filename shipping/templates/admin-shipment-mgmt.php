@@ -2,60 +2,97 @@
 global $wpdb;
 $sub = $_GET['sub'] ?? 'create-shipment';
 ?>
-<div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
-    <button class="shipping-tab-btn <?php echo $sub == 'registry' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-registry', this)">سجل الشحنات</button>
-    <button class="shipping-tab-btn <?php echo $sub == 'tracking' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-tracking', this)">تتبع الشحنات</button>
-    <button class="shipping-tab-btn <?php echo $sub == 'monitoring' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-monitoring', this)">مراقبة الحالة</button>
-    <button class="shipping-tab-btn <?php echo $sub == 'schedule' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-schedule', this)">جدول الشحن</button>
-    <button class="shipping-tab-btn <?php echo $sub == 'archiving' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-archiving', this)">الأرشفة</button>
-    <button class="shipping-tab-btn <?php echo $sub == 'bulk' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('shipment-bulk', this)">إدخال بالجملة</button>
-</div>
-
-<!-- Shipment Registry -->
-<div id="shipment-registry" class="shipping-internal-tab" style="display: <?php echo ($sub == 'registry' || $sub == 'create-shipment') ? 'block' : 'none'; ?>;">
-    <?php
-    $all_shipments = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.is_archived = 0 ORDER BY s.created_at DESC");
-    ?>
-    <div class="shipping-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h4 style="margin:0;">سجل الشحنات الشامل</h4>
+<div id="shipment-management-unified">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h3 style="margin:0;">إدارة الشحنات</h3>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="ShippingModal.open('modal-bulk-shipments')" class="shipping-btn" style="width:auto; background: var(--shipping-secondary-color);">+ إدخال بالجملة</button>
             <button onclick="ShipmentsController.openCreationModal()" class="shipping-btn" style="width:auto;">+ إضافة شحنة جديدة</button>
         </div>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
+    </div>
+
+    <!-- Professional Search & Filter Engine -->
+    <div style="background: white; padding: 25px; border: 1px solid var(--shipping-border-color); border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <form id="shipment-search-form" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 15px; align-items: end;">
+            <div class="shipping-form-group" style="margin-bottom:0;">
+                <label style="font-size: 12px; font-weight: 700; color: #64748b;">بحث متقدم (رقم الشحنة، العميل، الموقع):</label>
+                <input type="text" id="shipment-search-query" class="shipping-input" placeholder="أدخل بيانات البحث..." oninput="ShipmentsController.filterShipments()">
+            </div>
+            <div class="shipping-form-group" style="margin-bottom:0;">
+                <label style="font-size: 12px; font-weight: 700; color: #64748b;">تصفية حسب الحالة:</label>
+                <select id="shipment-filter-status" class="shipping-select" onchange="ShipmentsController.filterShipments()">
+                    <option value="">كافة الحالات</option>
+                    <option value="pending">قيد الانتظار</option>
+                    <option value="in-transit">قيد النقل</option>
+                    <option value="out-for-delivery">خارج للتوصيل</option>
+                    <option value="delivered">تم التسليم</option>
+                    <option value="delayed">متأخر</option>
+                    <option value="cancelled">ملغاة</option>
+                </select>
+            </div>
+            <div class="shipping-form-group" style="margin-bottom:0;">
+                <label style="font-size: 12px; font-weight: 700; color: #64748b;">ترتيب حسب:</label>
+                <select id="shipment-sort-order" class="shipping-select" onchange="ShipmentsController.filterShipments()">
+                    <option value="newest">الأحدث أولاً</option>
+                    <option value="oldest">الأقدم أولاً</option>
+                    <option value="weight_desc">الوزن (الأعلى)</option>
+                    <option value="weight_asc">الوزن (الأقل)</option>
+                </select>
+            </div>
+            <button type="button" onclick="ShipmentsController.resetFilters()" class="shipping-btn shipping-btn-outline" style="height: 45px; width: auto;">إعادة ضبط</button>
+        </form>
+    </div>
+
+    <div class="shipping-card" style="padding: 0; overflow: hidden;">
+        <div class="shipping-table-container" style="margin: 0;">
+            <table class="shipping-table" id="shipments-main-table">
                 <thead>
                     <tr>
                         <th>رقم الشحنة</th>
                         <th>العميل</th>
-                        <th>النوع</th>
-                        <th>المسار</th>
-                        <th>الوزن</th>
+                        <th>المسار والوجهة</th>
+                        <th>البيانات الفنية</th>
+                        <th>تاريخ الإنشاء</th>
                         <th>الحالة</th>
-                        <th>إجراءات</th>
+                        <th style="text-align: left;">إجراءات العمليات</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <?php if(empty($all_shipments)): ?>
-                        <tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">لا توجد شحنات مسجلة حالياً.</td></tr>
-                    <?php else: foreach($all_shipments as $s):
-                        // Determine if domestic or international based on origin/destination (simple logic for demo)
-                        $is_intl = (strpos(strtolower($s->origin), 'saudi') === false && strpos(strtolower($s->destination), 'saudi') === false && !empty($s->origin)) || (strpos(strtolower($s->origin), 'saudi') !== strpos(strtolower($s->destination), 'saudi'));
-                        // Actually let's assume if it contains a comma and different countries.
-                        // For simplicity, let's use a classification meta or just random pastel indicator.
-                        $type_label = $is_intl ? 'دولية' : 'محلية';
-                        $type_class = $is_intl ? 'badge-intl' : 'badge-dom';
-                    ?>
-                        <tr>
-                            <td><strong><?php echo $s->shipment_number; ?></strong></td>
-                            <td><?php echo esc_html($s->customer_name); ?></td>
-                            <td><span class="pastel-badge <?php echo $type_class; ?>"><?php echo $type_label; ?></span></td>
-                            <td><div style="font-size:11px;"><?php echo $s->origin; ?> <br> ➔ <?php echo $s->destination; ?></div></td>
-                            <td><?php echo $s->weight; ?> كجم</td>
-                            <td><span class="pastel-badge status-<?php echo $s->status; ?>"><?php echo $s->status; ?></span></td>
+                <tbody id="shipments-list-body">
+                    <?php
+                    $all_shipments = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id ORDER BY s.created_at DESC");
+                    if(empty($all_shipments)): ?>
+                        <tr><td colspan="7" style="text-align:center; padding:50px; color:#94a3b8;">لا توجد شحنات مسجلة حالياً في النظام.</td></tr>
+                    <?php else: foreach($all_shipments as $s): ?>
+                        <tr class="shipment-row" data-status="<?php echo $s->status; ?>" data-number="<?php echo $s->shipment_number; ?>" data-customer="<?php echo esc_attr($s->customer_name); ?>" data-created="<?php echo $s->created_at; ?>" data-weight="<?php echo $s->weight; ?>">
                             <td>
-                                <div style="display:flex; gap:5px;">
-                                    <button class="shipping-btn" style="padding:5px 10px; font-size:11px;" onclick="ShipmentsController.quickTrack('<?php echo $s->shipment_number; ?>', <?php echo $s->id; ?>, this)">تتبع</button>
-                                    <button class="shipping-btn" style="padding:5px 10px; font-size:11px; background:#319795;" onclick="ShipmentsController.viewFullDossier(<?php echo $s->id; ?>)">تفاصيل</button>
+                                <div style="font-weight: 800; color: var(--shipping-primary-color); font-size: 1.1em;"><?php echo $s->shipment_number; ?></div>
+                                <div style="font-size: 10px; color: #a0aec0; margin-top: 2px;">ID: #<?php echo $s->id; ?></div>
+                            </td>
+                            <td>
+                                <div style="font-weight: 700;"><?php echo esc_html($s->customer_name); ?></div>
+                                <div style="font-size: 11px; color: #718096;"><?php echo esc_html($s->origin); ?></div>
+                            </td>
+                            <td>
+                                <div style="font-size: 12px;">➔ <strong><?php echo $s->destination; ?></strong></div>
+                                <div style="font-size: 11px; color: #718096; margin-top: 3px;"><span class="dashicons dashicons-location-alt" style="font-size: 12px; width:12px; height:12px;"></span> <?php echo $s->location ?: 'قيد التحديث...'; ?></div>
+                            </td>
+                            <td>
+                                <div style="font-size: 12px;">الوزن: <strong><?php echo $s->weight; ?> كجم</strong></div>
+                                <div style="font-size: 11px; color: #718096;">التصنيف: <?php echo $s->classification; ?></div>
+                            </td>
+                            <td style="font-size: 12px; color: #4a5568;">
+                                <?php echo date('Y-m-d', strtotime($s->created_at)); ?><br>
+                                <small><?php echo date('H:i', strtotime($s->created_at)); ?></small>
+                            </td>
+                            <td>
+                                <span class="pastel-badge status-<?php echo $s->status; ?>" style="padding: 6px 12px; font-size: 10px;"><?php echo strtoupper($s->status); ?></span>
+                            </td>
+                            <td>
+                                <div style="display:flex; gap:6px; justify-content: flex-end;">
+                                    <button class="shipping-btn-outline" style="padding:6px 10px; font-size:11px;" onclick="ShipmentsController.quickTrack('<?php echo $s->shipment_number; ?>', <?php echo $s->id; ?>, this)">تتبع</button>
+                                    <button class="shipping-btn-outline" style="padding:6px 10px; font-size:11px; color: #319795; border-color: #319795;" onclick="ShipmentsController.viewFullDossier(<?php echo $s->id; ?>)">التفاصيل</button>
+                                    <button class="shipping-btn-outline" style="padding:6px 10px; font-size:11px; color: #805ad5; border-color: #805ad5;" onclick="ShipmentsController.printInvoice(<?php echo $s->id; ?>)">الفاتورة</button>
+                                    <button class="shipping-btn" style="padding:6px 10px; font-size:11px; background: #4a5568;" onclick="ShipmentsController.openEditModal(<?php echo htmlspecialchars(json_encode($s)); ?>)">تعديل</button>
                                 </div>
                             </td>
                         </tr>
@@ -202,169 +239,39 @@ $sub = $_GET['sub'] ?? 'create-shipment';
     </div>
 </div>
 
-<!-- 2. & 3. Tracking & Live Status Engine -->
-<div id="shipment-tracking" class="shipping-internal-tab" style="display: <?php echo $sub == 'tracking' ? 'block' : 'none'; ?>;">
-    <div class="shipping-card">
-        <h4>تتبع الشحنات المباشر</h4>
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <input type="text" id="track-number" class="shipping-input" placeholder="ادخل رقم الشحنة (مثال: SHP-XXXXXX)">
-            <button class="shipping-btn" style="width:auto;" onclick="ShipmentsController.trackShipment()">بحث وتتبع</button>
+<!-- Unified Tracking Modal -->
+<div id="modal-shipment-tracking-unified" class="shipping-modal-overlay">
+    <div class="shipping-modal-content" style="max-width: 700px;">
+        <div class="shipping-modal-header">
+            <h3>تتبع الشحنة المباشر</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-shipment-tracking-unified')">&times;</button>
         </div>
-        <div id="tracking-result" style="display:none; padding:20px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+        <div id="tracking-result-unified" style="padding: 25px; background: #f8fafc;">
             <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
                 <div>
-                    <h3 id="res-number" style="margin:0; color:var(--shipping-primary-color);"></h3>
-                    <div id="res-route" style="font-size:13px; color:#64748b; margin-top:5px;"></div>
+                    <h3 id="res-number-unified" style="margin:0; color:var(--shipping-primary-color);"></h3>
+                    <div id="res-route-unified" style="font-size:13px; color:#64748b; margin-top:5px;"></div>
                 </div>
-                <span id="res-status" class="shipping-badge" style="font-size:14px; padding:8px 15px;"></span>
+                <span id="res-status-unified" class="shipping-badge" style="font-size:14px; padding:8px 15px;"></span>
             </div>
-            <div id="res-timeline" class="tracking-timeline" style="position:relative; padding-right:40px; margin-top:20px;">
+            <div id="res-timeline-unified" class="tracking-timeline" style="position:relative; padding-right:40px; margin-top:20px;">
                 <!-- Timeline events will be injected here -->
             </div>
         </div>
     </div>
 </div>
 
-<!-- Shipment Logs Modal -->
-<div id="modal-shipment-logs" class="shipping-modal-overlay">
-    <div class="shipping-modal-content" style="max-width: 600px;">
+<!-- Bulk Entry Modal -->
+<div id="modal-bulk-shipments" class="shipping-modal-overlay">
+    <div class="shipping-modal-content" style="max-width: 800px;">
         <div class="shipping-modal-header">
-            <h3>سجل تتبع الشحنة: <span id="log-shipment-num"></span></h3>
-            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-shipment-logs')">&times;</button>
+            <h3>إدخال الشحنات بالجملة (JSON Import)</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-bulk-shipments')">&times;</button>
         </div>
-        <div class="shipping-modal-body">
-            <div id="shipment-logs-timeline" class="shipping-timeline" style="padding: 20px;">
-                <!-- Logs loaded via AJAX -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Monitoring & Audit Trail -->
-<div id="shipment-monitoring" class="shipping-internal-tab" style="display: <?php echo $sub == 'monitoring' ? 'block' : 'none'; ?>;">
-    <?php
-    $monitoring_shipments = $wpdb->get_results("SELECT s.*, (SELECT location FROM {$wpdb->prefix}shipping_shipment_tracking_events WHERE shipment_id = s.id ORDER BY created_at DESC LIMIT 1) as current_location FROM {$wpdb->prefix}shipping_shipments s WHERE s.status NOT IN ('delivered', 'cancelled') AND s.is_archived = 0 ORDER BY s.updated_at DESC");
-    ?>
-    <div class="shipping-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h4>مراقبة حالة الشحن والعمليات</h4>
-            <div style="display:flex; gap:10px;">
-                <button class="shipping-btn shipping-btn-outline" style="width:auto;" onclick="location.reload()">تحديث البيانات</button>
-            </div>
-        </div>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
-                <thead><tr><th>رقم الشحنة</th><th>الموقع الحالي</th><th>آخر تحديث</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-                <tbody>
-                    <?php if(empty($monitoring_shipments)): ?>
-                        <tr><td colspan="5" style="text-align:center; padding:20px;">لا توجد عمليات مراقبة نشطة حالياً.</td></tr>
-                    <?php else: foreach($monitoring_shipments as $s): ?>
-                        <tr>
-                            <td><strong><?php echo $s->shipment_number; ?></strong></td>
-                            <td><?php echo esc_html($s->current_location ?: 'غير محدد'); ?></td>
-                            <td><?php echo date('Y-m-d H:i', strtotime($s->updated_at)); ?></td>
-                            <td><span class="shipping-badge"><?php echo $s->status; ?></span></td>
-                            <td>
-                                <div style="display: flex; gap: 5px;">
-                                    <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#319795;" onclick="ShipmentsController.viewFullDossier(<?php echo $s->id; ?>)">الملف الكامل</button>
-                                    <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="ShipmentsController.quickTrack('<?php echo $s->shipment_number; ?>', <?php echo $s->id; ?>, this)">تتبع</button>
-                                    <button class="shipping-btn shipping-btn-outline" style="padding:4px 8px; font-size:11px;" onclick="ShipmentsController.viewLogs(<?php echo $s->id; ?>, '<?php echo $s->shipment_number; ?>')">السجل</button>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- 4. Intelligent Scheduling Module -->
-<div id="shipment-schedule" class="shipping-internal-tab" style="display: <?php echo $sub == 'schedule' ? 'block' : 'none'; ?>;">
-    <?php
-    $today = date('Y-m-d');
-    $pickups = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(pickup_date) = %s", $today));
-    $dispatches = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(dispatch_date) = %s", $today));
-    $deliveries = $wpdb->get_results($wpdb->prepare("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE DATE(delivery_date) = %s", $today));
-    ?>
-    <div class="shipping-card">
-        <h4>جدول الشحن والمهام لليوم (<?php echo $today; ?>)</h4>
-
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top:20px;">
-            <!-- Pickups -->
-            <div style="background:#fffaf0; border:1px solid #feebc8; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#dd6b20;">مهام الاستلام (${<?php echo count($pickups); ?>})</h5>
-                <div style="display:grid; gap:10px;">
-                    <?php if(empty($pickups)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
-                    foreach($pickups as $p): ?>
-                        <div style="background:#fff; padding:10px; border-radius:8px; font-size:12px; border:1px solid #fbd38d;">
-                            <strong><?php echo $p->shipment_number; ?></strong><br>
-                            <span style="color:#718096;"><?php echo esc_html($p->name); ?></span>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <!-- Dispatches -->
-            <div style="background:#ebf8ff; border:1px solid #bee3f8; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#3182ce;">مهام الانطلاق (${<?php echo count($dispatches); ?>})</h5>
-                <div style="display:grid; gap:10px;">
-                    <?php if(empty($dispatches)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
-                    foreach($dispatches as $d): ?>
-                        <div style="background:#fff; padding:10px; border-radius:8px; font-size:12px; border:1px solid #90cdf4;">
-                            <strong><?php echo $d->shipment_number; ?></strong><br>
-                            <span style="color:#718096;"><?php echo esc_html($d->name); ?></span>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <!-- Deliveries -->
-            <div style="background:#f0fff4; border:1px solid #c6f6d5; border-radius:12px; padding:20px;">
-                <h5 style="margin:0 0 15px 0; color:#38a169;">مهام التسليم (${<?php echo count($deliveries); ?>})</h5>
-                <div style="display:grid; gap:10px;">
-                    <?php if(empty($deliveries)) echo '<p style="font-size:12px; opacity:0.6;">لا توجد مهام</p>';
-                    foreach($deliveries as $del): ?>
-                        <div style="background:#fff; padding:10px; border-radius:8px; font-size:12px; border:1px solid #9ae6b4;">
-                            <strong><?php echo $del->shipment_number; ?></strong><br>
-                            <span style="color:#718096;"><?php echo esc_html($del->name); ?></span>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 10. Advanced Archiving System -->
-<div id="shipment-archiving" class="shipping-internal-tab" style="display: <?php echo $sub == 'archiving' ? 'block' : 'none'; ?>;">
-    <?php
-    $archived_shipments = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s LEFT JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id WHERE s.is_archived = 1 ORDER BY s.updated_at DESC");
-    ?>
-    <div class="shipping-card">
-        <h4>أرشفة الشحنات والاسترجاع</h4>
-        <div style="display:flex; gap:10px; margin-bottom:20px; background:#f1f5f9; padding:15px; border-radius:10px;">
-            <input type="date" class="shipping-input" placeholder="من تاريخ">
-            <input type="date" class="shipping-input" placeholder="إلى تاريخ">
-            <select class="shipping-select"><option value="">كل العملاء</option></select>
-            <button class="shipping-btn" style="width:auto;">بحث في الأرشيف</button>
-        </div>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
-                <thead><tr><th>رقم الشحنة</th><th>تاريخ التحديث</th><th>العميل</th><th>الحالة النهائية</th></tr></thead>
-                <tbody>
-                    <?php if(empty($archived_shipments)): ?>
-                        <tr><td colspan="4" style="text-align:center; padding:20px;">الأرشيف فارغ.</td></tr>
-                    <?php else: foreach($archived_shipments as $s): ?>
-                        <tr>
-                            <td><strong><?php echo $s->shipment_number; ?></strong></td>
-                            <td><?php echo date('Y-m-d', strtotime($s->updated_at)); ?></td>
-                            <td><?php echo esc_html($s->customer_name); ?></td>
-                            <td><span class="shipping-badge shipping-badge-low"><?php echo $s->status; ?></span></td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
+        <div class="shipping-modal-body" style="padding: 25px;">
+            <p style="color:#64748b; font-size:13px; margin-bottom: 15px;">يرجى لصق بيانات الشحنات بتنسيق JSON المعياري للإدراج الجماعي في النظام.</p>
+            <textarea id="bulk-rows-input" class="shipping-textarea" rows="12" placeholder='[{"shipment_number":"SHP-001", "customer_id":1, "origin":"الرياض", "destination":"دبي", "weight":10.5, "dimensions":"30x30x30", "classification":"express"}]'></textarea>
+            <button class="shipping-btn" style="margin-top:20px; height: 50px; font-weight: 800;" onclick="ShipmentsController.processBulkDirect()">بدء المعالجة والإدراج الفوري</button>
         </div>
     </div>
 </div>
@@ -382,13 +289,19 @@ $sub = $_GET['sub'] ?? 'create-shipment';
     </div>
 </div>
 
-<!-- 8. Bulk Shipment Entry -->
-<div id="shipment-bulk" class="shipping-internal-tab" style="display: <?php echo $sub == 'bulk' ? 'block' : 'none'; ?>;">
-    <div class="shipping-card">
-        <h4>إدخال الشحنات بالجملة</h4>
-        <p style="color:#64748b; font-size:13px;">يرجى لصق بيانات الشحنات بتنسيق JSON أو استخدام واجهة الإدخال المتعدد.</p>
-        <textarea id="bulk-rows" class="shipping-textarea" rows="10" placeholder='[{"shipment_number":"SHP-001", "customer_id":1, "origin":"Cairo", "destination":"Dubai", "weight":10.5, "dimensions":"30x30x30", "classification":"express"}]'></textarea>
-        <button class="shipping-btn" style="margin-top:15px;" onclick="ShipmentsController.processBulk()">معالجة وإدراج الشحنات</button>
+<!-- Direct Invoice Modal -->
+<div id="modal-shipment-invoice-print" class="shipping-modal-overlay">
+    <div class="shipping-modal-content" style="max-width: 850px;">
+        <div class="shipping-modal-header">
+            <h3>معاينة وطباعة فاتورة الشحنة</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-shipment-invoice-print')">&times;</button>
+        </div>
+        <div class="shipping-modal-body" id="invoice-print-content" style="padding: 30px; background: #f0f4f8;">
+            <!-- Invoice Template Injected Here -->
+        </div>
+        <div class="shipping-modal-footer" style="background: #fff; border-top: 1px solid #eee; padding: 15px 25px; text-align: left;">
+            <button class="shipping-btn" style="width: auto; padding: 0 30px;" onclick="ShipmentsController.executePrint()">طباعة الفاتورة الآن</button>
+        </div>
     </div>
 </div>
 

@@ -16,7 +16,7 @@ window.PublicController = {
         resultDiv.style.display = 'none';
         errorDiv.style.display = 'none';
 
-        fetch(ajaxurl + '?action=shipping_public_tracking_ajax&number=' + encodeURIComponent(num))
+        fetch(ajaxurl + '?action=shipping_public_tracking_ajax&number=' + encodeURIComponent(num) + '&nonce=' + (window.shippingVars ? shippingVars.publicNonce : ''))
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const s = res.data;
@@ -61,6 +61,7 @@ window.PublicController = {
 
         const fd = new FormData();
         fd.append('action', 'shipping_verify_document');
+        fd.append('nonce', window.shippingVars ? shippingVars.publicNonce : '');
         fd.append('search_value', val);
         fd.append('search_type', type);
 

@@ -30,14 +30,6 @@ class Shipping_Admin {
         );
 
 
-        add_submenu_page(
-            'shipping-dashboard',
-            'إدارة مستخدمي النظام',
-            'إدارة مستخدمي النظام',
-            'manage_options',
-            'shipping-users',
-            array($this, 'display_users_management')
-        );
 
         add_submenu_page(
             'shipping-dashboard',
