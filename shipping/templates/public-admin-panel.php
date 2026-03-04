@@ -212,17 +212,20 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
     <div class="shipping-admin-layout" style="display: flex; min-height: 800px;">
         <!-- SIDEBAR -->
         <?php $is_restricted = $is_subscriber; ?>
-        <div class="shipping-sidebar" style="width: 280px; flex-shrink: 0; background: <?php echo $appearance['sidebar_bg_color']; ?>; border-left: 1px solid var(--shipping-border-color); padding: 20px 0;">
+        <div class="shipping-sidebar" style="flex-shrink: 0; background: <?php echo $appearance['sidebar_bg_color']; ?>; border-left: 1px solid var(--shipping-border-color); padding: 20px 0; position: relative; transition: all 0.3s ease;">
+            <button class="shipping-sidebar-toggle" onclick="AdminController.toggleSidebar()" title="Toggle Sidebar">
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            </button>
             <ul style="list-style: none; padding: 0; margin: 0;">
 
                 <?php if (!$is_restricted): ?>
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'summary' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg('shipping_tab', 'summary'); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-dashboard"></span> <?php echo $labels['tab_summary']; ?></a>
+                <li class="shipping-sidebar-item <?php echo $active_tab == 'summary' ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_summary']); ?>">
+                    <a href="<?php echo add_query_arg('shipping_tab', 'summary'); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-dashboard"></span> <span><?php echo $labels['tab_summary']; ?></span></a>
                 </li>
 
 
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'shipment-mgmt' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg(['shipping_tab' => 'shipment-mgmt', 'sub' => 'create-shipment']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-products"></span> <?php echo $labels['tab_shipment_mgmt']; ?></a>
+                <li class="shipping-sidebar-item <?php echo $active_tab == 'shipment-mgmt' ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_shipment_mgmt']); ?>">
+                    <a href="<?php echo add_query_arg(['shipping_tab' => 'shipment-mgmt', 'sub' => 'create-shipment']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-products"></span> <span><?php echo $labels['tab_shipment_mgmt']; ?></span></a>
                     <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'shipment-mgmt' ? 'block' : 'none'; ?>;">
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'shipment-mgmt', 'sub' => 'create-shipment']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'create-shipment' ? 'shipping-sub-active' : ''; ?>">إنشاء شحنة جديدة</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'shipment-mgmt', 'sub' => 'tracking']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'tracking' ? 'shipping-sub-active' : ''; ?>">تتبع الشحنات</a></li>
@@ -232,8 +235,8 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                     </ul>
                 </li>
 
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'customer-mgmt' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg(['shipping_tab' => 'customer-mgmt', 'sub' => 'profiles']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-groups"></span> <?php echo $labels['tab_customer_mgmt']; ?></a>
+                <li class="shipping-sidebar-item <?php echo $active_tab == 'customer-mgmt' ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_customer_mgmt']); ?>">
+                    <a href="<?php echo add_query_arg(['shipping_tab' => 'customer-mgmt', 'sub' => 'profiles']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-groups"></span> <span><?php echo $labels['tab_customer_mgmt']; ?></span></a>
                     <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'customer-mgmt' ? 'block' : 'none'; ?>;">
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'customer-mgmt', 'sub' => 'profiles']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'profiles' ? 'shipping-sub-active' : ''; ?>">ملفات العملاء</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'customer-mgmt', 'sub' => 'history']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'history' ? 'shipping-sub-active' : ''; ?>">سجل الشحنات</a></li>
@@ -243,8 +246,8 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                     </ul>
                 </li>
 
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'order-mgmt' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg(['shipping_tab' => 'order-mgmt', 'sub' => 'new-orders']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-clipboard"></span> <?php echo $labels['tab_order_mgmt']; ?></a>
+                <li class="shipping-sidebar-item <?php echo $active_tab == 'order-mgmt' ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_order_mgmt']); ?>">
+                    <a href="<?php echo add_query_arg(['shipping_tab' => 'order-mgmt', 'sub' => 'new-orders']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-clipboard"></span> <span><?php echo $labels['tab_order_mgmt']; ?></span></a>
                     <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'order-mgmt' ? 'block' : 'none'; ?>;">
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'order-mgmt', 'sub' => 'new-orders']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'new-orders' ? 'shipping-sub-active' : ''; ?>">طلبات شحن جديدة</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'order-mgmt', 'sub' => 'in-progress']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'in-progress' ? 'shipping-sub-active' : ''; ?>">طلبات قيد التنفيذ</a></li>
@@ -253,8 +256,8 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                     </ul>
                 </li>
 
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'tracking-logistics' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg(['shipping_tab' => 'tracking-logistics', 'sub' => 'live-tracking']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-location-alt"></span> <?php echo $labels['tab_tracking_logistics']; ?></a>
+                <li class="shipping-sidebar-item <?php echo $active_tab == 'tracking-logistics' ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_tracking_logistics']); ?>">
+                    <a href="<?php echo add_query_arg(['shipping_tab', 'tracking-logistics', 'sub' => 'live-tracking']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-location-alt"></span> <span><?php echo $labels['tab_tracking_logistics']; ?></span></a>
                     <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'tracking-logistics' ? 'block' : 'none'; ?>;">
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'tracking-logistics', 'sub' => 'live-tracking']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'live-tracking' ? 'shipping-sub-active' : ''; ?>">تتبع مباشر</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'tracking-logistics', 'sub' => 'routes']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'routes' ? 'shipping-sub-active' : ''; ?>">مسارات الشحن</a></li>
@@ -264,8 +267,8 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                     </ul>
                 </li>
 
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'customs-clearance' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg(['shipping_tab' => 'customs-clearance', 'sub' => 'documentation']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-media-document"></span> <?php echo $labels['tab_customs_clearance']; ?></a>
+                <li class="shipping-sidebar-item <?php echo $active_tab == 'customs-clearance' ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_customs_clearance']); ?>">
+                    <a href="<?php echo add_query_arg(['shipping_tab' => 'customs-clearance', 'sub' => 'documentation']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-media-document"></span> <span><?php echo $labels['tab_customs_clearance']; ?></span></a>
                     <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'customs-clearance' ? 'block' : 'none'; ?>;">
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'customs-clearance', 'sub' => 'documentation']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'documentation' ? 'shipping-sub-active' : ''; ?>">الوثائق والمستندات</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'customs-clearance', 'sub' => 'invoices']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'invoices' ? 'shipping-sub-active' : ''; ?>">الفواتير التجارية</a></li>
@@ -274,8 +277,8 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                     </ul>
                 </li>
 
-                <li class="shipping-sidebar-item <?php echo $active_tab == 'billing-payments' ? 'shipping-active' : ''; ?>">
-                    <a href="<?php echo add_query_arg(['shipping_tab' => 'billing-payments', 'sub' => 'invoice-gen']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-money-alt"></span> <?php echo $labels['tab_billing_payments']; ?></a>
+                <li class="shipping-sidebar-item <?php echo $active_tab == 'billing-payments' ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_billing_payments']); ?>">
+                    <a href="<?php echo add_query_arg(['shipping_tab' => 'billing-payments', 'sub' => 'invoice-gen']); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-money-alt"></span> <span><?php echo $labels['tab_billing_payments']; ?></span></a>
                     <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'billing-payments' ? 'block' : 'none'; ?>;">
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'billing-payments', 'sub' => 'invoice-gen']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'invoice-gen' ? 'shipping-sub-active' : ''; ?>">إصدار الفواتير</a></li>
                         <li><a href="<?php echo add_query_arg(['shipping_tab' => 'billing-payments', 'sub' => 'records']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'records' ? 'shipping-sub-active' : ''; ?>">سجلات المدفوعات</a></li>
@@ -290,16 +293,16 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                 <?php endif; ?>
 
                 <?php if ($is_restricted): ?>
-                    <li class="shipping-sidebar-item <?php echo in_array($active_tab, ['my-profile', 'customer-profile']) ? 'shipping-active' : ''; ?>">
-                        <a href="<?php echo add_query_arg('shipping_tab', 'my-profile'); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-admin-users"></span> <?php echo $labels['tab_my_profile']; ?></a>
+                    <li class="shipping-sidebar-item <?php echo in_array($active_tab, ['my-profile', 'customer-profile']) ? 'shipping-active' : ''; ?>" data-title="<?php echo esc_attr($labels['tab_my_profile']); ?>">
+                        <a href="<?php echo add_query_arg('shipping_tab', 'my-profile'); ?>" class="shipping-sidebar-link"><span class="dashicons dashicons-admin-users"></span> <span><?php echo $labels['tab_my_profile']; ?></span></a>
                     </li>
                 <?php endif; ?>
 
 
 
                 <?php if ($is_admin || $is_sys_admin || $is_administrator): ?>
-                    <li class="shipping-sidebar-item <?php echo $active_tab == 'advanced-settings' ? 'shipping-active' : ''; ?>">
-                        <a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'init']); ?>" class="shipping-sidebar-link" style="color: #c53030 !important;"><span class="dashicons dashicons-shield-alt"></span> الإعدادات المتقدمة</a>
+                    <li class="shipping-sidebar-item <?php echo $active_tab == 'advanced-settings' ? 'shipping-active' : ''; ?>" data-title="الإعدادات المتقدمة">
+                        <a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'init']); ?>" class="shipping-sidebar-link" style="color: #c53030 !important;"><span class="dashicons dashicons-shield-alt"></span> <span>الإعدادات المتقدمة</span></a>
                         <ul class="shipping-sidebar-dropdown" style="display: <?php echo $active_tab == 'advanced-settings' ? 'block' : 'none'; ?>;">
                             <li><a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'init']); ?>" class="<?php echo (!isset($_GET['sub']) || $_GET['sub'] == 'init') ? 'shipping-sub-active' : ''; ?>"><span class="dashicons dashicons-admin-tools"></span> تهيئة النظام</a></li>
                             <li><a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'notifications']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'notifications' ? 'shipping-sub-active' : ''; ?>"><span class="dashicons dashicons-email"></span> التنبيهات والبريد</a></li>
