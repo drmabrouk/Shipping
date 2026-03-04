@@ -33,7 +33,7 @@ window.CustomersController = {
 
         const fd = new FormData(form);
         fd.append('action', 'shipping_add_customer_ajax');
-        // Nonce is usually passed via a hidden field or global
+        fd.append('shipping_nonce', shippingVars.customerNonce);
 
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
@@ -55,7 +55,7 @@ window.CustomersController = {
 
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><span class="dashicons dashicons-update spin"></span> جاري التحميل...</td></tr>';
 
-        fetch(ajaxurl + '?action=shipping_get_contracts')
+        fetch(ajaxurl + '?action=shipping_get_contracts&nonce=' + shippingVars.nonce)
         .then(r => r.json()).then(res => {
             if (!res.data.length) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد عقود مسجلة</td></tr>';
@@ -81,7 +81,11 @@ window.CustomersController = {
         btn.disabled = true;
         btn.innerText = 'جاري الحفظ...';
 
-        fetch(ajaxurl, { method: 'POST', body: new FormData(form) })
+        const fd = new FormData(form);
+        fd.append('action', 'shipping_add_contract');
+        fd.append('nonce', shippingVars.contractNonce);
+
+        fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
             btn.disabled = false;
             btn.innerText = 'حفظ العقد';

@@ -26,12 +26,12 @@ class Shipping_Settings {
     public static function get_labels() {
         $default = array(
             'tab_summary' => 'نظرة عامة',
-            'tab_users_management' => 'إدارة المستخدمين',
+            'tab_users_management' => 'إدارة مستخدمي النظام (كافة الأدوار)',
             'tab_global_settings' => 'إعدادات النظام',
             'tab_my_profile' => 'ملفي الشخصي',
             'tab_general_stats' => 'الإحصائيات العامة',
             'tab_shipment_mgmt' => 'إدارة الشحنات',
-            'tab_customer_mgmt' => 'إدارة العملاء',
+            'tab_customer_mgmt' => 'إدارة العملاء (العملاء فقط)',
             'tab_order_mgmt' => 'إدارة الطلبات',
             'tab_tracking_logistics' => 'التتبع واللوجستيات',
             'tab_customs_clearance' => 'التخليص الجمركي',

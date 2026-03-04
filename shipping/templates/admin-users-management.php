@@ -1,7 +1,7 @@
 <?php if (!defined('ABSPATH')) exit; ?>
 <div class="shipping-content-wrapper" dir="rtl">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <h3 style="margin:0; border:none; padding:0;">إدارة مستخدمي النظام</h3>
+        <h3 style="margin:0; border:none; padding:0;">إدارة مستخدمي النظام (كافة الأدوار والأذونات)</h3>
         <?php if (current_user_can('manage_options')): ?>
             <div style="display:flex; gap:10px; flex-wrap: wrap;">
                 <button onclick="UsersController.executeBulkDelete()" class="shipping-btn" style="width:auto; background:#e53e3e;">حذف المستخدمين المحددين</button>
@@ -19,15 +19,6 @@
                 <button class="shipping-modal-close" onclick="ShippingModal.close('unified-import-form')">&times;</button>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px;">
-                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <h4 style="margin-top:0;">استيراد عملاء (Customers)</h4>
-                    <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">(اسم المستخدم، الاسم الأول، اسم العائلة، رقم الهاتف، البريد الإلكتروني)</p>
-                    <form method="post" enctype="multipart/form-data">
-                        <?php wp_nonce_field('shipping_admin_action', 'shipping_admin_nonce'); ?>
-                        <input type="file" name="customer_csv_file" accept=".csv" required style="margin-bottom:10px; width:100%;">
-                        <button type="submit" name="shipping_import_customers_csv" class="shipping-btn" style="background:#27ae60; width:100%;">بدء استيراد العملاء</button>
-                    </form>
-                </div>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
                     <h4 style="margin-top:0;">استيراد مستخدمين/مسؤولين (Staff)</h4>
                     <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">(اسم المستخدم، البريد، الاسم الأول، اسم العائلة، الكود، المسمى، الهاتف، كلمة المرور)</p>
@@ -48,7 +39,8 @@
 
     <div style="background: white; padding: 30px; border: 1px solid var(--shipping-border-color); border-radius: var(--shipping-radius); margin-bottom: 30px; box-shadow: var(--shipping-shadow);">
         <form method="get" style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 20px; align-items: end;">
-            <input type="hidden" name="shipping_tab" value="users-management">
+            <input type="hidden" name="shipping_tab" value="advanced-settings">
+            <input type="hidden" name="sub" value="users-management">
 
             <div class="shipping-form-group" style="margin-bottom:0;">
                 <label class="shipping-label">بحث عن مستخدم (اسم/بريد/كود/اسم مستخدم):</label>
@@ -58,15 +50,15 @@
             <div class="shipping-form-group" style="margin-bottom:0;">
                 <label class="shipping-label">تصفية حسب الدور:</label>
                 <select name="role_filter" class="shipping-select">
-                    <option value="">كل المستخدمين</option>
+                    <option value="">كل الأدوار الإدارية</option>
                     <option value="administrator" <?php selected($_GET['role_filter'] ?? '', 'administrator'); ?>>مديرو النظام (Administrators)</option>
-                    <option value="subscriber" <?php selected($_GET['role_filter'] ?? '', 'subscriber'); ?>>العملاء (Customers/Subscribers)</option>
+                    <option value="subscriber" <?php selected($_GET['role_filter'] ?? '', 'subscriber'); ?>>العملاء (للمراجعة فقط)</option>
                 </select>
             </div>
 
             <div style="display: flex; gap: 10px;">
                 <button type="submit" class="shipping-btn">تطبيق البحث</button>
-                <a href="<?php echo add_query_arg(array('shipping_tab'=>'users-management'), remove_query_arg(array('user_search', 'role_filter', 'paged'))); ?>" class="shipping-btn shipping-btn-outline" style="text-decoration:none;">إعادة ضبط</a>
+                <a href="<?php echo add_query_arg(array('shipping_tab'=>'advanced-settings', 'sub' => 'users-management'), remove_query_arg(array('user_search', 'role_filter', 'paged'))); ?>" class="shipping-btn shipping-btn-outline" style="text-decoration:none;">إعادة ضبط</a>
             </div>
         </form>
     </div>

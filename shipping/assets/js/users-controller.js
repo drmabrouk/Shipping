@@ -8,17 +8,18 @@ window.UsersController = {
     },
 
     setupEventListeners() {
-        this.bindForm('add-user-form', 'shipping_add_staff_ajax', () => location.reload());
-        this.bindForm('edit-user-form', 'shipping_update_staff_ajax', () => location.reload());
+        this.bindForm('add-user-form', 'shipping_add_staff_ajax', () => location.reload(), shippingVars.staffNonce);
+        this.bindForm('edit-user-form', 'shipping_update_staff_ajax', () => location.reload(), shippingVars.staffNonce);
     },
 
-    bindForm(formId, action, callback) {
+    bindForm(formId, action, callback, nonce) {
         const form = document.getElementById(formId);
         if (!form) return;
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const fd = new FormData(form);
             if (!fd.has('action')) fd.append('action', action);
+            if (nonce) fd.append('shipping_nonce', nonce);
 
             fetch(ajaxurl, { method: 'POST', body: fd })
             .then(r => r.json()).then(res => {
@@ -48,7 +49,7 @@ window.UsersController = {
         const formData = new FormData();
         formData.append('action', 'shipping_delete_staff_ajax');
         formData.append('user_id', id);
-        formData.append('nonce', shippingVars.nonce || '');
+        formData.append('nonce', shippingVars.staffNonce || '');
 
         fetch(ajaxurl, { method: 'POST', body: formData })
         .then(r => r.json())
@@ -73,7 +74,7 @@ window.UsersController = {
         const formData = new FormData();
         formData.append('action', 'shipping_bulk_delete_users_ajax');
         formData.append('user_ids', ids.join(','));
-        formData.append('nonce', shippingVars.nonce || '');
+        formData.append('nonce', shippingVars.staffNonce || '');
 
         fetch(ajaxurl, { method: 'POST', body: formData })
         .then(r => r.json())

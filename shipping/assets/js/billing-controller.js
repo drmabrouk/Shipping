@@ -12,10 +12,10 @@ window.BillingController = {
     },
 
     setupEventListeners() {
-        this.bindForm('shipping-invoice-form', 'shipping_save_invoice', () => location.reload());
-        this.bindForm('shipping-payment-form', 'shipping_process_payment', () => location.reload());
-        this.bindForm('form-rule-direct', 'shipping_add_pricing', () => this.loadRules());
-        this.bindForm('form-fee-direct', 'shipping_add_additional_fee', () => this.loadFees());
+        this.bindForm('shipping-invoice-form', 'shipping_save_invoice', () => location.reload(), shippingVars.billingNonce);
+        this.bindForm('shipping-payment-form', 'shipping_process_payment', () => location.reload(), shippingVars.billingNonce);
+        this.bindForm('form-rule-direct', 'shipping_add_pricing', () => this.loadRules(), shippingVars.pricingNonce);
+        this.bindForm('form-fee-direct', 'shipping_add_additional_fee', () => this.loadFees(), shippingVars.pricingNonce);
 
         const calcForm = document.getElementById('shipping-calculator-form-direct');
         if (calcForm) {
@@ -23,6 +23,7 @@ window.BillingController = {
                 e.preventDefault();
                 const fd = new FormData(calcForm);
                 fd.append('action', 'shipping_estimate_cost');
+                fd.append('nonce', shippingVars.nonce);
                 fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
                     if (res.success) {
                         const data = res.data;
@@ -40,13 +41,14 @@ window.BillingController = {
         }
     },
 
-    bindForm(formId, action, callback) {
+    bindForm(formId, action, callback, nonce) {
         const form = document.getElementById(formId);
         if (!form) return;
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const fd = new FormData(form);
             if (!fd.has('action')) fd.append('action', action);
+            if (nonce) fd.append('nonce', nonce);
 
             // Special handling for invoice items
             if (formId === 'shipping-invoice-form') {
@@ -140,7 +142,7 @@ window.BillingController = {
         const num = document.getElementById('import-shipment-number').value;
         if(!num) return alert('يرجى إدخال رقم الشحنة');
 
-        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + num)
+        fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + num + '&nonce=' + shippingVars.shipmentNonce)
         .then(r => r.json()).then(res => {
             if(res.success) {
                 const s = res.data;
@@ -150,6 +152,7 @@ window.BillingController = {
 
                 const fd = new FormData();
                 fd.append('action', 'shipping_estimate_cost');
+                fd.append('nonce', shippingVars.nonce);
                 fd.append('customer_id', s.customer_id);
                 fd.append('classification', s.classification);
                 fd.append('weight', s.weight);
@@ -177,7 +180,7 @@ window.BillingController = {
     },
 
     loadRules() {
-        fetch(ajaxurl + '?action=shipping_get_pricing_rules').then(r => r.json()).then(res => {
+        fetch(ajaxurl + '?action=shipping_get_pricing_rules&nonce=' + shippingVars.pricingNonce).then(r => r.json()).then(res => {
             const body = document.getElementById('rules-table-direct');
             if(!body) return;
             if (!res.data.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد قواعد</td></tr>'; return; }
@@ -197,12 +200,13 @@ window.BillingController = {
         if(!confirm('حذف القاعدة؟')) return;
         const fd = new FormData();
         fd.append('action', 'shipping_delete_pricing_rule');
+        fd.append('nonce', shippingVars.pricingNonce);
         fd.append('id', id);
         fetch(ajaxurl, { method: 'POST', body: fd }).then(() => this.loadRules());
     },
 
     loadFees() {
-        fetch(ajaxurl + '?action=shipping_get_additional_fees').then(r => r.json()).then(res => {
+        fetch(ajaxurl + '?action=shipping_get_additional_fees&nonce=' + shippingVars.pricingNonce).then(r => r.json()).then(res => {
             const body = document.getElementById('fees-table-direct');
             if(!body) return;
             if (!res.data.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد رسوم</td></tr>'; return; }
@@ -222,6 +226,7 @@ window.BillingController = {
         if(!confirm('حذف الرسم؟')) return;
         const fd = new FormData();
         fd.append('action', 'shipping_delete_additional_fee');
+        fd.append('nonce', shippingVars.pricingNonce);
         fd.append('id', id);
         fetch(ajaxurl, { method: 'POST', body: fd }).then(() => this.loadFees());
     },
@@ -229,7 +234,7 @@ window.BillingController = {
     initCharts() {
         const ctx = document.getElementById('revenueChart')?.getContext('2d');
         if(!ctx) return;
-        fetch(ajaxurl + '?action=shipping_get_billing_report')
+        fetch(ajaxurl + '?action=shipping_get_billing_report&nonce=' + shippingVars.billingNonce)
         .then(r => r.json())
         .then(res => {
             if(res.success) {

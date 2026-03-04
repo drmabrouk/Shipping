@@ -20,17 +20,18 @@ window.CustomsController = {
     },
 
     setupEventListeners() {
-        this.bindForm('form-add-customs-full', 'shipping_add_customs', () => location.reload());
-        this.bindForm('form-add-customs-doc', 'shipping_add_customs_doc', () => this.loadDocs());
+        this.bindForm('form-add-customs-full', 'shipping_add_customs', () => location.reload(), shippingVars.customsNonce);
+        this.bindForm('form-add-customs-doc', 'shipping_add_customs_doc', () => this.loadDocs(), shippingVars.customsNonce);
     },
 
-    bindForm(formId, action, callback) {
+    bindForm(formId, action, callback, nonce) {
         const form = document.getElementById(formId);
         if (!form) return;
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const fd = new FormData(form);
             if (!fd.has('action')) fd.append('action', action);
+            if (nonce) fd.append('nonce', nonce);
 
             fetch(ajaxurl, { method: 'POST', body: fd })
             .then(r => r.json()).then(res => {
@@ -59,7 +60,7 @@ window.CustomsController = {
     },
 
     loadDocs() {
-        fetch(ajaxurl + '?action=shipping_get_customs_docs')
+        fetch(ajaxurl + '?action=shipping_get_customs_docs&nonce=' + shippingVars.customsNonce)
         .then(r => r.json()).then(res => {
             const tbody = document.getElementById('customs-docs-table');
             if (!tbody) return;
@@ -77,7 +78,7 @@ window.CustomsController = {
     },
 
     loadInvoices() {
-        fetch(ajaxurl + '?action=shipping_get_customs_docs')
+        fetch(ajaxurl + '?action=shipping_get_customs_docs&nonce=' + shippingVars.customsNonce)
         .then(r => r.json()).then(res => {
             const tbody = document.getElementById('customs-invoices-table');
             if (!tbody) return;
@@ -95,7 +96,7 @@ window.CustomsController = {
     },
 
     loadShipmentsForSelect() {
-        fetch(ajaxurl + '?action=shipping_get_all_shipments')
+        fetch(ajaxurl + '?action=shipping_get_all_shipments&nonce=' + shippingVars.nonce)
         .then(r => r.json()).then(res => {
             if (res.success) {
                 const options = res.data.map(s => `<option value="${s.id}">${s.shipment_number}</option>`).join('');
@@ -108,7 +109,7 @@ window.CustomsController = {
     },
 
     loadStatus() {
-        fetch(ajaxurl + '?action=shipping_get_customs_status')
+        fetch(ajaxurl + '?action=shipping_get_customs_status&nonce=' + shippingVars.customsNonce)
         .then(r => r.json()).then(res => {
             const tbody = document.getElementById('customs-status-table');
             if (!tbody) return;

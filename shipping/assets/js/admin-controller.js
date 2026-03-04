@@ -21,19 +21,20 @@ window.AdminController = {
     },
 
     setupEventListeners() {
-        this.bindForm('shipping-edit-page-form', 'shipping_save_page_settings', () => location.reload());
-        this.bindForm('shipping-add-article-form', 'shipping_add_article', () => location.reload());
-        this.bindForm('shipping-alert-form', 'shipping_save_alert', () => location.reload());
-        this.bindForm('shipping-notif-template-form', 'shipping_save_template_ajax', () => shippingShowNotification('تم حفظ القالب بنجاح'));
+        this.bindForm('shipping-edit-page-form', 'shipping_save_page_settings', () => location.reload(), shippingVars.nonce);
+        this.bindForm('shipping-add-article-form', 'shipping_add_article', () => location.reload(), shippingVars.nonce);
+        this.bindForm('shipping-alert-form', 'shipping_save_alert', () => location.reload(), shippingVars.nonce);
+        this.bindForm('shipping-notif-template-form', 'shipping_save_template_ajax', () => shippingShowNotification('تم حفظ القالب بنجاح'), shippingVars.nonce);
     },
 
-    bindForm(formId, action, callback) {
+    bindForm(formId, action, callback, nonce) {
         const form = document.getElementById(formId);
         if (!form) return;
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const fd = new FormData(form);
             if (!fd.has('action')) fd.append('action', action);
+            if (nonce) fd.append('nonce', nonce);
 
             fetch(ajaxurl, { method: 'POST', body: fd })
             .then(r => r.json()).then(res => {
@@ -77,6 +78,7 @@ window.AdminController = {
         const fd = new FormData();
         fd.append('action', 'shipping_rollback_log_ajax');
         fd.append('log_id', logId);
+        fd.append('nonce', shippingVars.nonce);
 
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
@@ -92,6 +94,7 @@ window.AdminController = {
         const fd = new FormData();
         fd.append('action', 'shipping_delete_log');
         fd.append('log_id', logId);
+        fd.append('nonce', shippingVars.nonce);
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
             if (res.success) location.reload();
         });
@@ -101,6 +104,7 @@ window.AdminController = {
         if (!confirm('هل أنت متأكد من مسح كافة السجلات؟')) return;
         const fd = new FormData();
         fd.append('action', 'shipping_clear_all_logs');
+        fd.append('nonce', shippingVars.nonce);
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
             if (res.success) location.reload();
         });
@@ -115,6 +119,7 @@ window.AdminController = {
         const fd = new FormData();
         fd.append('action', 'shipping_reset_system_ajax');
         fd.append('admin_password', password);
+        fd.append('nonce', shippingVars.nonce);
 
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
@@ -167,6 +172,7 @@ window.AdminController = {
     saveProfile() {
         const fd = new FormData();
         fd.append('action', 'shipping_update_profile_ajax');
+        fd.append('nonce', shippingVars.profileNonce);
         fd.append('first_name', document.getElementById('shipping_edit_first_name').value);
         fd.append('last_name', document.getElementById('shipping_edit_last_name').value);
         fd.append('user_email', document.getElementById('shipping_edit_user_email').value);
@@ -195,6 +201,7 @@ window.AdminController = {
         const fd = new FormData();
         fd.append('action', 'shipping_delete_article');
         fd.append('id', id);
+        fd.append('nonce', shippingVars.nonce);
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r=>r.json()).then(res=>{
             if(res.success) location.reload();
         });
@@ -218,6 +225,7 @@ window.AdminController = {
         const fd = new FormData();
         fd.append('action', 'shipping_delete_alert');
         fd.append('id', id);
+        fd.append('nonce', shippingVars.nonce);
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r=>r.json()).then(res=>{
             if(res.success) location.reload();
         });
@@ -246,6 +254,7 @@ window.AdminController = {
         const fd = new FormData();
         fd.append('action', 'shipping_get_template_ajax');
         fd.append('type', type);
+        fd.append('nonce', shippingVars.nonce);
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json())
         .then(res => {

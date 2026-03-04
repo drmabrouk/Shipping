@@ -82,7 +82,22 @@ class Shipping_Public {
             'ajaxurl' => admin_url('admin-ajax.php'),
             'adminUrl' => admin_url('admin.php?page=shipping-admin'),
             'currency' => $info['currency'] ?? 'SAR',
-            'nonce' => wp_create_nonce('shipping_admin_action')
+            'nonce' => wp_create_nonce('shipping_admin_action'),
+            'shipmentNonce' => wp_create_nonce('shipping_shipment_action'),
+            'orderNonce' => wp_create_nonce('shipping_order_action'),
+            'logisticNonce' => wp_create_nonce('shipping_logistic_action'),
+            'billingNonce' => wp_create_nonce('shipping_billing_action'),
+            'customsNonce' => wp_create_nonce('shipping_customs_action'),
+            'ticketNonce' => wp_create_nonce('shipping_ticket_action'),
+            'customerNonce' => wp_create_nonce('shipping_add_customer'),
+            'deleteCustomerNonce' => wp_create_nonce('shipping_delete_customer'),
+            'pricingNonce' => wp_create_nonce('shipping_pricing_action'),
+            'messageNonce' => wp_create_nonce('shipping_message_action'),
+            'staffNonce' => wp_create_nonce('shippingCustomerAction'),
+            'profileNonce' => wp_create_nonce('shipping_profile_action'),
+            'photoNonce' => wp_create_nonce('shipping_photo_action'),
+            'contractNonce' => wp_create_nonce('shipping_contract_action'),
+            'publicNonce' => wp_create_nonce('shipping_public_action'),
         ));
 
         // Legacy global for inline scripts still being migrated
@@ -824,70 +839,22 @@ class Shipping_Public {
     }
 
     public function ajax_add_staff() {
-        global $wpdb;
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         if (!wp_verify_nonce($_POST['shipping_nonce'], 'shippingCustomerAction')) wp_send_json_error('Security check failed');
 
-        $username = sanitize_user($_POST['user_login']);
-        $email = sanitize_email($_POST['user_email']);
-        $first_name = sanitize_text_field($_POST['first_name']);
-        $last_name = sanitize_text_field($_POST['last_name']);
-        $display_name = trim($first_name . ' ' . $last_name);
         $role = sanitize_text_field($_POST['role']);
 
-        if (empty($username)) wp_send_json_error('اسم المستخدم مطلوب');
-        if (empty($email)) wp_send_json_error('البريد الإلكتروني مطلوب');
-        if (empty($first_name)) wp_send_json_error('الاسم الأول مطلوب');
-        if (empty($last_name)) wp_send_json_error('اسم العائلة مطلوب');
-        if (empty($role)) wp_send_json_error('الدور مطلوب');
-
-        if (username_exists($username)) wp_send_json_error('اسم المستخدم موجود مسبقاً');
-        if (email_exists($email)) wp_send_json_error('البريد الإلكتروني مسجل لمستخدم آخر');
-
-        $pass = !empty($_POST['user_pass']) ? $_POST['user_pass'] : 'SHP' . sprintf("%010d", mt_rand(0, 9999999999));
-
-        // Prevent role escalation
-        if ($role === 'administrator' && !current_user_can('manage_options')) {
-            wp_send_json_error('Insufficient permissions to assign this role');
+        // Strict separation: System staff management requires manage_options
+        // and non-administrators cannot create other administrators.
+        if ($role !== 'subscriber' && !current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized role assignment');
         }
 
-        if ($role === 'subscriber') {
-            // Unified Add for Customer
-            $customer_data = [
-                'username' => sanitize_text_field($_POST['officer_id'] ?: $username),
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'email' => $email,
-                'phone' => sanitize_text_field($_POST['phone']),
-                'id_number' => sanitize_text_field($_POST['id_number'] ?? ''),
-                'account_status' => sanitize_text_field($_POST['account_status'] ?? 'active')
-            ];
-            // Shipping_DB::add_customer handles WP User creation too.
-            // But we already checked for exists.
-            $res = Shipping_DB::add_customer($customer_data);
-            if (is_wp_error($res)) wp_send_json_error($res->get_error_message());
-            $user_id = $wpdb->get_var($wpdb->prepare("SELECT wp_user_id FROM {$wpdb->prefix}shipping_customers WHERE id = %d", $res));
-        } else {
-            // Standard Staff
-            $user_id = wp_insert_user(array(
-                'user_login' => $username,
-                'user_email' => $email,
-                'display_name' => $display_name,
-                'user_pass' => $pass,
-                'role' => $role
-            ));
-            if (is_wp_error($user_id)) wp_send_json_error($user_id->get_error_message());
+        $res = Shipping_DB::save_user($_POST);
+        if (is_wp_error($res)) wp_send_json_error($res->get_error_message());
 
-            update_user_meta($user_id, 'shipping_temp_pass', $pass);
-            update_user_meta($user_id, 'first_name', $first_name);
-            update_user_meta($user_id, 'last_name', $last_name);
-            update_user_meta($user_id, 'shippingCustomerIdAttr', sanitize_text_field($_POST['officer_id']));
-            update_user_meta($user_id, 'shipping_phone', sanitize_text_field($_POST['phone']));
-            update_user_meta($user_id, 'shipping_account_status', 'active');
-        }
-
-        Shipping_Logger::log('إضافة مستخدم (موحد)', "الاسم: $display_name الدور: $role");
-        wp_send_json_success($user_id);
+        Shipping_Logger::log('إضافة مستخدم (بنية موحدة)', "الاسم: {$_POST['first_name']} {$_POST['last_name']} الدور: $role");
+        wp_send_json_success($res);
     }
 
     public function ajax_delete_staff() {
@@ -918,44 +885,17 @@ class Shipping_Public {
         if (!$this->can_manage_user($user_id)) wp_send_json_error('Access denied');
 
         $role = sanitize_text_field($_POST['role']);
-        $first_name = sanitize_text_field($_POST['first_name']);
-        $last_name = sanitize_text_field($_POST['last_name']);
-        $display_name = trim($first_name . ' ' . $last_name);
-
-        // Prevent role escalation
-        if ($role === 'administrator' && !current_user_can('manage_options')) {
-            wp_send_json_error('Insufficient permissions to assign this role');
+        if ($role !== 'subscriber' && !current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized role update');
         }
 
-        $user_data = array('ID' => $user_id, 'display_name' => $display_name, 'user_email' => sanitize_email($_POST['user_email']));
-        if (!empty($_POST['user_pass'])) {
-            $user_data['user_pass'] = $_POST['user_pass'];
-            update_user_meta($user_id, 'shipping_temp_pass', $_POST['user_pass']);
-        }
-        wp_update_user($user_data);
+        $data = $_POST;
+        $data['id'] = $user_id;
 
-        $u = new WP_User($user_id);
-        $u->set_role($role);
+        $res = Shipping_DB::save_user($data);
+        if (is_wp_error($res)) wp_send_json_error($res->get_error_message());
 
-        update_user_meta($user_id, 'first_name', $first_name);
-        update_user_meta($user_id, 'last_name', $last_name);
-        update_user_meta($user_id, 'shippingCustomerIdAttr', sanitize_text_field($_POST['officer_id']));
-        update_user_meta($user_id, 'shipping_phone', sanitize_text_field($_POST['phone']));
-
-        update_user_meta($user_id, 'shipping_account_status', sanitize_text_field($_POST['account_status']));
-
-        // Sync to shipping_customers if it's a customer
-        if ($role === 'subscriber') {
-            global $wpdb;
-            $wpdb->update("{$wpdb->prefix}shipping_customers", [
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'email' => sanitize_email($_POST['user_email']),
-                'phone' => sanitize_text_field($_POST['phone'])
-            ], ['wp_user_id' => $user_id]);
-        }
-
-        Shipping_Logger::log('تحديث مستخدم (موحد)', "الاسم: $display_name");
+        Shipping_Logger::log('تحديث مستخدم (بنية موحدة)', "الاسم: {$_POST['first_name']} {$_POST['last_name']}");
         wp_send_json_success('Updated');
     }
 

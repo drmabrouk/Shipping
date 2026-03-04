@@ -31,7 +31,7 @@ window.OrdersController = {
 
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;"><span class="dashicons dashicons-update spin"></span> جاري التحميل...</td></tr>';
 
-        fetch(ajaxurl + `?action=shipping_get_orders&status=${status}&search=${encodeURIComponent(search)}`)
+        fetch(ajaxurl + `?action=shipping_get_orders&status=${status}&search=${encodeURIComponent(search)}&nonce=${shippingVars.orderNonce}`)
         .then(r => r.json()).then(res => {
             if (!res.data.length) {
                 tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">لا توجد طلبات متوفرة</td></tr>';
@@ -86,7 +86,11 @@ window.OrdersController = {
         const originalText = btn.innerText;
         btn.innerText = 'جاري الحفظ...';
 
-        fetch(ajaxurl, { method: 'POST', body: new FormData(form) })
+        const fd = new FormData(form);
+        fd.append('action', 'shipping_add_order');
+        fd.append('nonce', shippingVars.orderNonce);
+
+        fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json()).then(res => {
             btn.disabled = false;
             btn.innerText = originalText;
@@ -130,7 +134,7 @@ window.OrdersController = {
 
         const fd = new FormData(form);
         fd.append('action', 'shipping_update_order');
-        // Nonce is usually in the form or we can get it from a global
+        fd.append('nonce', shippingVars.orderNonce);
 
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
             btn.disabled = false;
@@ -147,6 +151,7 @@ window.OrdersController = {
         if (!confirm(`هل أنت متأكد من تغيير حالة الطلب إلى ${status}؟`)) return;
         const fd = new FormData();
         fd.append('action', 'shipping_update_order');
+        fd.append('nonce', shippingVars.orderNonce);
         fd.append('id', id);
         fd.append('status', status);
 
@@ -162,6 +167,7 @@ window.OrdersController = {
         if (!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً؟')) return;
         const fd = new FormData();
         fd.append('action', 'shipping_delete_order');
+        fd.append('nonce', shippingVars.orderNonce);
         fd.append('id', id);
 
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
@@ -181,7 +187,7 @@ window.OrdersController = {
             container.innerHTML = '<p style="text-align:center;">جاري تحميل السجل...</p>';
             ShippingModal.open('modal-order-logs');
 
-            fetch(ajaxurl + '?action=shipping_get_order_logs&id=' + id)
+            fetch(ajaxurl + '?action=shipping_get_order_logs&id=' + id + '&nonce=' + shippingVars.nonce)
             .then(r => r.json()).then(res => {
                 if (!res.data.length) { container.innerHTML = '<p>لا توجد سجلات لهذا الطلب</p>'; return; }
                 container.innerHTML = res.data.map(l => `
@@ -240,6 +246,7 @@ window.OrdersController = {
 
         const fd = new FormData();
         fd.append('action', 'shipping_bulk_update_orders');
+        fd.append('nonce', shippingVars.orderNonce);
         fd.append('ids', ids.join(','));
         fd.append('status', status);
 

@@ -40,7 +40,7 @@ window.TicketsController = {
         const priority = document.getElementById('filter-priority').value;
         const search = document.getElementById('filter-search').value;
 
-        fetch(ajaxurl + `?action=shipping_get_tickets&status=${status}&category=${category}&priority=${priority}&search=${search}`)
+        fetch(ajaxurl + `?action=shipping_get_tickets&status=${status}&category=${category}&priority=${priority}&search=${search}&nonce=${shippingVars.ticketNonce}`)
         .then(r => r.json())
         .then(res => {
             grid.style.opacity = '1';
@@ -95,7 +95,7 @@ window.TicketsController = {
             detailsContainer.innerHTML = '<div style="text-align: center; padding: 100px;"><div class="shipping-loader-mini"></div></div>';
         }
 
-        fetch(ajaxurl + `?action=shipping_get_ticket_details&id=${id}`)
+        fetch(ajaxurl + `?action=shipping_get_ticket_details&id=${id}&nonce=${shippingVars.ticketNonce}`)
         .then(r => r.json())
         .then(res => {
             if (res.success) {
@@ -210,7 +210,7 @@ window.TicketsController = {
 
         const fd = new FormData(form);
         fd.append('action', 'shipping_create_ticket');
-        fd.append('nonce', shippingVars.nonce || '');
+        fd.append('nonce', shippingVars.ticketNonce || '');
 
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json())
@@ -236,7 +236,7 @@ window.TicketsController = {
 
         const fd = new FormData(form);
         fd.append('action', 'shipping_add_ticket_reply');
-        fd.append('nonce', shippingVars.nonce || '');
+        fd.append('nonce', shippingVars.ticketNonce || '');
 
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json())
@@ -256,7 +256,7 @@ window.TicketsController = {
         const fd = new FormData();
         fd.append('action', 'shipping_close_ticket');
         fd.append('id', id);
-        fd.append('nonce', shippingVars.nonce || '');
+        fd.append('nonce', shippingVars.ticketNonce || '');
 
         fetch(ajaxurl, { method: 'POST', body: fd })
         .then(r => r.json())
