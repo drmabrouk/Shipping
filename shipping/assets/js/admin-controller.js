@@ -6,6 +6,24 @@
 window.AdminController = {
     init() {
         this.setupEventListeners();
+        this.initSidebarState();
+    },
+
+    initSidebarState() {
+        const isCollapsed = localStorage.getItem('shipping_sidebar_collapsed') === 'true';
+        if (isCollapsed) {
+            const sidebar = document.querySelector('.shipping-sidebar');
+            if (sidebar) sidebar.classList.add('collapsed');
+        }
+    },
+
+    toggleSidebar() {
+        const sidebar = document.querySelector('.shipping-sidebar');
+        if (!sidebar) return;
+
+        sidebar.classList.toggle('collapsed');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('shipping_sidebar_collapsed', isCollapsed);
     },
 
     openSubTab(tab, btn) {

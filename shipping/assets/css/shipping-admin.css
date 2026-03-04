@@ -307,3 +307,97 @@
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* --- Collapsible Sidebar --- */
+.shipping-sidebar {
+    width: 280px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.shipping-sidebar.collapsed {
+    width: 80px;
+}
+
+.shipping-sidebar-toggle {
+    position: absolute;
+    top: 15px;
+    left: -15px; /* Default for Sidebar on Right (RTL) */
+    width: 30px;
+    height: 30px;
+    background: var(--shipping-primary-color);
+    border: none;
+    border-radius: 50%;
+    color: white !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+
+[dir="ltr"] .shipping-sidebar-toggle {
+    left: auto;
+    right: -15px;
+}
+
+.shipping-sidebar-toggle:hover {
+    background: var(--shipping-secondary-color);
+    transform: scale(1.1);
+}
+
+.shipping-sidebar.collapsed .shipping-sidebar-toggle {
+    transform: rotate(180deg);
+}
+
+[dir="ltr"] .shipping-sidebar.collapsed .shipping-sidebar-toggle {
+    transform: rotate(0deg);
+}
+
+[dir="ltr"] .shipping-sidebar-toggle {
+    transform: rotate(180deg);
+}
+
+.shipping-sidebar.collapsed .shipping-sidebar-link {
+    padding: 15px 0;
+    justify-content: center;
+    gap: 0;
+}
+
+.shipping-sidebar.collapsed .shipping-sidebar-link span:not(.dashicons) {
+    display: none;
+}
+
+.shipping-sidebar.collapsed .shipping-sidebar-dropdown {
+    display: none !important;
+}
+
+/* Tooltip for collapsed state */
+.shipping-sidebar.collapsed .shipping-sidebar-item:hover::after {
+    content: attr(data-title);
+    position: absolute;
+    right: 90px; /* Default for RTL */
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--shipping-dark-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    pointer-events: none;
+}
+
+[dir="ltr"] .shipping-sidebar.collapsed .shipping-sidebar-item:hover::after {
+    right: auto;
+    left: 90px;
+}
+
+/* Sidebar transition refinements */
+.shipping-sidebar-link {
+    overflow: hidden;
+    white-space: nowrap;
+}
