@@ -721,29 +721,8 @@ class Shipping_Activator {
 
     private static function migrate_tables() {
         global $wpdb;
-        // Rebranding Migration (workedia_ -> shipping_)
+        // Rebranding Migration (Legacy)
         $mappings = array(
-            'workedia_customers'                  => 'shipping_customers',
-            'workedia_messages'                 => 'shipping_messages',
-            'workedia_logs'                     => 'shipping_logs',
-            'workedia_notification_templates'   => 'shipping_notification_templates',
-            'workedia_notification_logs'        => 'shipping_notification_logs',
-            'workedia_tickets'                  => 'shipping_tickets',
-            'workedia_ticket_thread'            => 'shipping_ticket_thread',
-            'workedia_pages'                    => 'shipping_pages',
-            'workedia_articles'                 => 'shipping_articles',
-            'workedia_alerts'                   => 'shipping_alerts',
-            'workedia_alert_views'              => 'shipping_alert_views',
-            'workedia_shipments'                => 'shipping_shipments',
-            'workedia_orders'                   => 'shipping_orders',
-            'workedia_customers'                => 'shipping_customers',
-            'workedia_logistics'                => 'shipping_logistics',
-            'workedia_customs'                  => 'shipping_customs',
-            'workedia_invoices'                 => 'shipping_invoices',
-            'workedia_payments'                 => 'shipping_payments',
-            'workedia_pricing'                  => 'shipping_pricing',
-            'workedia_shipment_logs'            => 'shipping_shipment_logs',
-            'workedia_shipment_tracking_events' => 'shipping_shipment_tracking_events',
             // Table Renaming
             'shipping_customers'          => 'shipping_customers',
             // Legacy Migration (sm_ -> shipping_)

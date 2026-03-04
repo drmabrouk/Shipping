@@ -1606,36 +1606,6 @@ class Shipping_Public {
         else wp_send_json_error('Failed to delete article');
     }
 
-    public function ajax_save_alert() {
-        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
-        check_ajax_referer('shipping_admin_action', 'nonce');
-
-        $data = [
-            'id' => !empty($_POST['id']) ? intval($_POST['id']) : null,
-            'title' => sanitize_text_field($_POST['title']),
-            'message' => wp_kses_post($_POST['message']),
-            'severity' => sanitize_text_field($_POST['severity']),
-            'must_acknowledge' => !empty($_POST['must_acknowledge']) ? 1 : 0,
-            'status' => sanitize_text_field($_POST['status'] ?? 'active')
-        ];
-
-        if (Shipping_DB::save_alert($data)) wp_send_json_success();
-        else wp_send_json_error('Failed to save alert');
-    }
-
-    public function ajax_delete_alert() {
-        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
-        check_ajax_referer('shipping_admin_action', 'nonce');
-        if (Shipping_DB::delete_alert(intval($_POST['id']))) wp_send_json_success();
-        else wp_send_json_error('Failed to delete alert');
-    }
-
-    public function ajax_acknowledge_alert() {
-        if (!is_user_logged_in()) wp_send_json_error('Unauthorized');
-        $alert_id = intval($_POST['alert_id']);
-        if (Shipping_DB::acknowledge_alert($alert_id, get_current_user_id())) wp_send_json_success();
-        else wp_send_json_error('Failed to acknowledge alert');
-    }
 
     public function ajax_check_username_email() {
         $username = sanitize_user($_POST['username'] ?? '');
@@ -1873,12 +1843,39 @@ class Shipping_Public {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         check_ajax_referer('shipping_shipment_action', 'nonce');
 
-        $origin = sanitize_text_field($_POST['origin_country'] . ', ' . $_POST['origin_city']);
-        $destination = sanitize_text_field($_POST['destination_country'] . ', ' . $_POST['destination_city']);
+        global $wpdb;
+        $customer_id = intval($_POST['customer_id']);
+        $origin_country = sanitize_text_field($_POST['origin_country'] ?? '');
+        $destination_country = sanitize_text_field($_POST['destination_country'] ?? '');
+
+        $origin = sanitize_text_field($origin_country . ', ' . ($_POST['origin_city'] ?? ''));
+        $destination = sanitize_text_field($destination_country . ', ' . ($_POST['destination_city'] ?? ''));
+
+        // Generate Tracking Number: [INT/LOC]YYYYMMDDXXXX
+        $prefix = ($origin_country !== $destination_country) ? 'INT' : 'LOC';
+        $date_part = current_time('Ymd');
+        $random_part = sprintf('%04d', mt_rand(0, 9999));
+        $shipment_number = $prefix . $date_part . $random_part;
+
+        // Automated Cost Calculation
+        $route_id = intval($_POST['route_id'] ?? 0);
+        $distance = 0;
+        if ($route_id) {
+            $distance = $wpdb->get_var($wpdb->prepare("SELECT total_distance FROM {$wpdb->prefix}shipping_logistics WHERE id = %d", $route_id));
+        }
+
+        $estimate = Shipping_DB::estimate_shipment_cost([
+            'weight' => floatval($_POST['weight']),
+            'distance' => floatval($distance),
+            'customer_id' => $customer_id,
+            'classification' => sanitize_text_field($_POST['classification']),
+            'is_urgent' => !empty($_POST['is_urgent']),
+            'is_insured' => !empty($_POST['is_insured'])
+        ]);
 
         $data = array(
-            'shipment_number' => 'SHP-' . strtoupper(wp_generate_password(8, false)),
-            'customer_id' => intval($_POST['customer_id']),
+            'shipment_number' => $shipment_number,
+            'customer_id' => $customer_id,
             'origin' => $origin,
             'destination' => $destination,
             'weight' => floatval($_POST['weight']),
@@ -1889,17 +1886,41 @@ class Shipping_Public {
             'dispatch_date' => $_POST['dispatch_date'],
             'delivery_date' => $_POST['delivery_date'],
             'carrier_id' => intval($_POST['carrier_id']),
-            'route_id' => intval($_POST['route_id']),
-            'estimated_cost' => floatval($_POST['estimated_cost'] ?? 0)
+            'route_id' => $route_id,
+            'estimated_cost' => $estimate['total_cost'],
+            'cost_breakdown_json' => json_encode($estimate['breakdown'])
         );
 
         $id = Shipping_DB::add_shipment($data);
         if ($id) {
-            // Link to order if provided
-            if (!empty($_POST['order_id'])) {
-                Shipping_DB::update_order(intval($_POST['order_id']), ['shipment_id' => $id, 'status' => 'in-progress']);
+            $order_id = intval($_POST['order_id'] ?? 0);
+            if ($order_id) {
+                Shipping_DB::update_order($order_id, ['shipment_id' => $id, 'status' => 'in-progress']);
             }
-            wp_send_json_success($id);
+
+            // Automated Invoice Generation
+            $invoice_id = Shipping_DB::create_invoice([
+                'customer_id' => $customer_id,
+                'order_id' => $order_id,
+                'subtotal' => $estimate['breakdown']['base'] + $estimate['breakdown']['weight'] + $estimate['breakdown']['distance'],
+                'tax_amount' => 0,
+                'discount_amount' => $estimate['breakdown']['discount'],
+                'total_amount' => $estimate['total_cost'],
+                'items_json' => json_encode([
+                    ['description' => 'Shipping Base Rate', 'amount' => $estimate['breakdown']['base']],
+                    ['description' => 'Weight Surcharge', 'amount' => $estimate['breakdown']['weight']],
+                    ['description' => 'Distance Rate', 'amount' => $estimate['breakdown']['distance']],
+                    ['description' => 'Additional Fees/Insurance', 'amount' => $estimate['breakdown']['fees']]
+                ]),
+                'due_date' => date('Y-m-d', strtotime('+7 days'))
+            ]);
+
+            wp_send_json_success([
+                'shipment_id' => $id,
+                'shipment_number' => $shipment_number,
+                'invoice_id' => $invoice_id,
+                'total_cost' => $estimate['total_cost']
+            ]);
         } else wp_send_json_error('Failed to create shipment');
     }
 
@@ -2349,7 +2370,18 @@ class Shipping_Public {
 
         $shipment = Shipping_DB::get_shipment_with_tracking($number);
         if ($shipment) {
-            wp_send_json_success($shipment);
+            // Data hardening: Only return fields safe for public viewing
+            $public_data = [
+                'shipment_number' => $shipment->shipment_number,
+                'status'          => $shipment->status,
+                'origin'          => $shipment->origin,
+                'destination'     => $shipment->destination,
+                'location'        => $shipment->location,
+                'pickup_date'     => $shipment->pickup_date,
+                'delivery_date'   => $shipment->delivery_date,
+                'events'          => $shipment->events ?? []
+            ];
+            wp_send_json_success($public_data);
         } else {
             wp_send_json_error('Not found');
         }
@@ -2384,68 +2416,5 @@ class Shipping_Public {
         ]);
     }
 
-    public function inject_global_alerts() {
-        if (!is_user_logged_in()) return;
-
-        $user_id = get_current_user_id();
-        $alerts = Shipping_DB::get_active_alerts_for_user($user_id);
-
-        if (empty($alerts)) return;
-
-        foreach ($alerts as $alert) {
-            $severity_class = 'shipping-alert-' . $alert->severity;
-            $bg_color = '#fff';
-            $border_color = '#e2e8f0';
-            $text_color = '#1a202c';
-
-            if ($alert->severity === 'warning') {
-                $bg_color = '#fffaf0';
-                $border_color = '#f6ad55';
-            } elseif ($alert->severity === 'critical') {
-                $bg_color = '#fff5f5';
-                $border_color = '#feb2b2';
-            }
-
-            ?>
-            <div id="shipping-global-alert-<?php echo $alert->id; ?>" class="shipping-alert-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(3px); z-index:99999; display:flex; align-items:center; justify-content:center; animation: shippingFadeIn 0.3s ease-out;">
-                <div class="shipping-alert-modal" style="background:<?php echo $bg_color; ?>; border:2px solid <?php echo $border_color; ?>; border-radius:15px; width:90%; max-width:500px; padding:30px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); position:relative; text-align:center; direction:rtl; font-family:'Rubik', sans-serif;">
-                    <div style="font-size:40px; margin-bottom:15px;">
-                        <?php
-                        if ($alert->severity === 'info') echo 'ℹ️';
-                        elseif ($alert->severity === 'warning') echo '⚠️';
-                        elseif ($alert->severity === 'critical') echo '🚨';
-                        ?>
-                    </div>
-                    <h2 style="margin:0 0 15px 0; color:#2d3748; font-weight:800; font-size:1.5em;"><?php echo esc_html($alert->title); ?></h2>
-                    <div style="color:#4a5568; line-height:1.6; margin-bottom:25px; font-size:1.1em;"><?php echo wp_kses_post($alert->message); ?></div>
-                    <div style="font-size:11px; color:#a0aec0; margin-bottom:20px;"><?php echo date_i18n('j F Y, H:i', strtotime($alert->created_at)); ?></div>
-
-                    <button onclick="shippingAcknowledgeAlert(<?php echo $alert->id; ?>, <?php echo $alert->must_acknowledge ? 'true' : 'false'; ?>)" class="shipping-btn" style="width:100%; height:45px; font-weight:800; background:<?php echo ($alert->severity === 'critical' ? '#e53e3e' : ($alert->severity === 'warning' ? '#dd6b20' : 'var(--shipping-primary-color)')); ?>;">
-                        <?php echo $alert->must_acknowledge ? 'إقرار واستمرار' : 'إغلاق'; ?>
-                    </button>
-                </div>
-            </div>
-            <?php
-        }
-        ?>
-        <script>
-        function shippingAcknowledgeAlert(alertId, mustAck) {
-            const fd = new FormData();
-            fd.append('action', 'shipping_acknowledge_alert');
-            fd.append('alert_id', alertId);
-
-            fetch('<?php echo admin_url('admin-ajax.php'); ?>', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    document.getElementById('shipping-global-alert-' + alertId).remove();
-                } else if (!mustAck) {
-                    document.getElementById('shipping-global-alert-' + alertId).remove();
-                }
-            });
-        }
-        </script>
-        <?php
-    }
 
 }

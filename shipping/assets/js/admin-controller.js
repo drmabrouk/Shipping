@@ -23,7 +23,6 @@ window.AdminController = {
     setupEventListeners() {
         this.bindForm('shipping-edit-page-form', 'shipping_save_page_settings', () => location.reload(), shippingVars.nonce);
         this.bindForm('shipping-add-article-form', 'shipping_add_article', () => location.reload(), shippingVars.nonce);
-        this.bindForm('shipping-alert-form', 'shipping_save_alert', () => location.reload(), shippingVars.nonce);
         this.bindForm('shipping-notif-template-form', 'shipping_save_template_ajax', () => shippingShowNotification('تم حفظ القالب بنجاح'), shippingVars.nonce);
     },
 
@@ -207,48 +206,6 @@ window.AdminController = {
         });
     },
 
-    // --- Alerts ---
-    editAlert(al) {
-        const f = document.getElementById('shipping-alert-form');
-        document.getElementById('edit-alert-id').value = al.id;
-        f.title.value = al.title;
-        f.message.value = al.message;
-        f.severity.value = al.severity;
-        f.status.value = al.status;
-        f.must_acknowledge.checked = al.must_acknowledge == 1;
-        document.getElementById('shipping-alert-modal-title').innerText = 'تعديل التنبيه';
-        ShippingModal.open('shipping-alert-modal');
-    },
-
-    deleteAlert(id) {
-        if(!confirm('هل أنت متأكد من حذف هذا التنبيه؟')) return;
-        const fd = new FormData();
-        fd.append('action', 'shipping_delete_alert');
-        fd.append('id', id);
-        fd.append('nonce', shippingVars.nonce);
-        fetch(ajaxurl, { method: 'POST', body: fd }).then(r=>r.json()).then(res=>{
-            if(res.success) location.reload();
-        });
-    },
-
-    applyAlertTemplate(type) {
-        const templates = {
-            payment: { title: 'تذكير بسداد الرسوم', message: 'نود تذكيركم بضرورة سداد رسوم الحساب المتأخرة لتجنب غرامات التأخير ولضمان استمرار الخدمات.', severity: 'warning', must_acknowledge: 1 },
-            expiry: { title: 'تنبيه: انتهاء صلاحية الحساب', message: 'عميليتكم ستنتهي قريباً، يرجى التوجه لقسم المالية أو السداد إلكترونياً لتجديد الحساب.', severity: 'critical', must_acknowledge: 1 },
-            maintenance: { title: 'إعلان صيانة النظام', message: 'سيتم إيقاف النظام مؤقتاً لأعمال الصيانة الدورية يوم الجمعة القادم من الساعة 2 صباحاً وحتى 6 صباحاً.', severity: 'info', must_acknowledge: 0 },
-            docs: { title: 'تذكير باستكمال الوثائق', message: 'يرجى مراجعة ملفكم الشخصي ورفع الوثائق المطلوبة لاستكمال ملف الحساب الرقمي.', severity: 'info', must_acknowledge: 0 },
-            urgent: { title: 'قرار إداري عاجل', message: 'بناءً على اجتماع مجلس الإدارة الأخير، تقرر البدء في تنفيذ الآلية الجديدة لتوزيع الحوافز المهنية.', severity: 'critical', must_acknowledge: 1 }
-        };
-        const t = templates[type];
-        if(!t) return;
-        const f = document.getElementById('shipping-alert-form');
-        f.title.value = t.title;
-        f.message.value = t.message;
-        f.severity.value = t.severity;
-        f.must_acknowledge.checked = t.must_acknowledge == 1;
-        document.getElementById('shipping-alert-modal-title').innerText = 'إنشاء تنبيه من قالب';
-        ShippingModal.open('shipping-alert-modal');
-    },
 
     loadNotifTemplate(type) {
         const fd = new FormData();
