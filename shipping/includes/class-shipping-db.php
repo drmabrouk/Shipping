@@ -127,6 +127,28 @@ class Shipping_DB {
         return $wpdb->get_row($wpdb->prepare("SELECT *, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers WHERE id = %d", $id));
     }
 
+    public static function get_customer_comprehensive($id) {
+        global $wpdb;
+        $customer = self::get_customer_by_id($id);
+        if (!$customer) return null;
+
+        $shipments = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}shipping_shipments WHERE customer_id = %d ORDER BY created_at DESC",
+            $id
+        ));
+
+        $contracts = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}shipping_contracts WHERE customer_id = %d ORDER BY id DESC",
+            $id
+        ));
+
+        return [
+            'customer' => $customer,
+            'shipments' => $shipments,
+            'contracts' => $contracts
+        ];
+    }
+
     public static function get_customer_by_username($username) {
         global $wpdb;
         return $wpdb->get_row($wpdb->prepare("SELECT *, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers WHERE username = %s", $username));

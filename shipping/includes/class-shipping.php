@@ -41,6 +41,7 @@ class Shipping {
         $this->loader->add_action('wp_login_failed', $plugin_public, 'login_failed');
         $this->loader->add_action('wp_login', $plugin_public, 'log_successful_login', 10, 2);
         $this->loader->add_action('wp_ajax_shipping_get_customer', $plugin_public, 'ajax_get_customer');
+        $this->loader->add_action('wp_ajax_shipping_get_customer_comprehensive', $plugin_public, 'ajax_get_customer_comprehensive');
         $this->loader->add_action('wp_ajax_shipping_search_customers', $plugin_public, 'ajax_search_customers');
         $this->loader->add_action('wp_ajax_shipping_refresh_dashboard', $plugin_public, 'ajax_refresh_dashboard');
         $this->loader->add_action('wp_ajax_shipping_update_customer_photo', $plugin_public, 'ajax_update_customer_photo');

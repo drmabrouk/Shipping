@@ -806,6 +806,18 @@ class Shipping_Public {
         }
     }
 
+    public function ajax_get_customer_comprehensive() {
+        if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
+        check_ajax_referer('shipping_admin_action', 'nonce');
+
+        $id = intval($_GET['id']);
+        if (!$this->can_access_customer($id)) wp_send_json_error('Access denied');
+
+        $data = Shipping_DB::get_customer_comprehensive($id);
+        if ($data) wp_send_json_success($data);
+        else wp_send_json_error('Customer data not found');
+    }
+
     public function ajax_search_customers() {
         if (!current_user_can('manage_options')) wp_send_json_error('Unauthorized');
         $query = sanitize_text_field($_POST['query']);
@@ -1104,9 +1116,12 @@ class Shipping_Public {
         check_ajax_referer('shipping_admin_action', 'shipping_nonce');
 
         $customer_id = intval($_POST['customer_id']);
-        $wp_user_id = intval($_POST['wp_user_id']);
-        $email = sanitize_email($_POST['email']);
-        $password = $_POST['password'] ?? '';
+        $customer = Shipping_DB::get_customer_by_id($customer_id);
+        if (!$customer) wp_send_json_error('Customer not found');
+
+        $wp_user_id = $customer->wp_user_id;
+        $email = sanitize_email($_POST['account_email'] ?? $_POST['email']);
+        $password = $_POST['new_password'] ?? $_POST['password'] ?? '';
         $role = $_POST['role'] ?? '';
 
         if (!$this->can_access_customer($customer_id)) wp_send_json_error('Access denied');

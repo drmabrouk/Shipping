@@ -1,138 +1,197 @@
-<?php if (!defined('ABSPATH')) exit;
-$sub = $_GET['sub'] ?? 'profiles';
-?>
+<?php if (!defined('ABSPATH')) exit; ?>
 <div class="shipping-admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-    <div class="shipping-tabs-wrapper" style="display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 5px;">
-        <button class="shipping-tab-btn <?php echo $sub == 'profiles' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-profiles', this)">ملفات العملاء</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'history' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-history', this)">سجل الشحنات</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'address-book' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-address', this)">دفتر العناوين</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'contracts' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-contracts', this); loadContracts()">العقود والاتفاقيات</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'classification' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-class', this)">التصنيف</button>
+    <div style="display: flex; align-items: center; gap: 20px; flex: 1;">
+        <h2 style="margin: 0; font-weight: 800; color: var(--shipping-dark-color);">إدارة العملاء الموحدة</h2>
+        <div style="position: relative; flex: 1; max-width: 400px;">
+            <input type="text" id="customer-search-engine" class="shipping-input" placeholder="ابحث عن عميل بالاسم، البريد، أو رقم الهاتف..." oninput="CustomersController.filterCustomers()">
+            <span class="dashicons dashicons-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></span>
+        </div>
     </div>
     <div style="display: flex; gap: 10px;">
-        <button class="shipping-btn" onclick="ShippingModal.open('add-customer-modal')">+ عميل جديد</button>
-        <button class="shipping-btn" style="background: #805ad5;" onclick="ShippingModal.open('modal-add-contract')">+ إضافة عقد</button>
+        <button class="shipping-btn" onclick="ShippingModal.open('add-customer-modal')">+ إضافة عميل جديد</button>
     </div>
 </div>
 
-<div id="customer-profiles" class="shipping-internal-tab" style="display: <?php echo $sub == 'profiles' ? 'block' : 'none'; ?>;">
-    <?php
-    global $wpdb;
-    // Strictly manage Customers (Subscribers)
-    $customers = $wpdb->get_results("SELECT c.*, CONCAT(c.first_name, ' ', c.last_name) as name FROM {$wpdb->prefix}shipping_customers c JOIN {$wpdb->prefix}users u ON c.wp_user_id = u.ID JOIN {$wpdb->prefix}usermeta um ON u.ID = um.user_id WHERE um.meta_key = '{$wpdb->prefix}capabilities' AND um.meta_value LIKE '%subscriber%' ORDER BY c.id DESC");
-    ?>
-    <div class="shipping-card">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-            <h4>قاعدة بيانات العملاء</h4>
-        </div>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
-                <thead><tr><th>الاسم</th><th>البريد</th><th>الهاتف</th><th>التصنيف</th><th>إجراءات</th></tr></thead>
-                <tbody>
-                    <?php if(empty($customers)): ?>
-                        <tr><td colspan="5" style="text-align:center; padding:20px;">لا يوجد عملاء مسجلين.</td></tr>
-                    <?php else: foreach($customers as $c): ?>
-                        <tr>
-                            <td><strong><?php echo esc_html($c->name); ?></strong></td>
-                            <td><?php echo esc_html($c->email); ?></td>
-                            <td><?php echo esc_html($c->phone); ?></td>
-                            <td><span class="shipping-badge"><?php echo esc_html($c->classification); ?></span></td>
-                            <td>
-                                <a href="<?php echo add_query_arg(['shipping_tab' => 'customer-profile', 'customer_id' => $c->id]); ?>" onclick="ShippingState.setCustomer(<?php echo $c->id; ?>)" class="shipping-btn shipping-btn-outline" style="padding: 5px 10px; font-size: 11px; text-decoration:none;">عرض الملف</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div id="customer-history" class="shipping-internal-tab" style="display: <?php echo $sub == 'history' ? 'block' : 'none'; ?>;">
-    <?php
-    $history = $wpdb->get_results("SELECT s.*, CONCAT(c.first_name, ' ', c.last_name) as customer_name FROM {$wpdb->prefix}shipping_shipments s JOIN {$wpdb->prefix}shipping_customers c ON s.customer_id = c.id ORDER BY s.created_at DESC LIMIT 100");
-    ?>
-    <div class="shipping-card">
-        <h4>سجل الشحنات العام للعملاء</h4>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
-                <thead><tr><th>العميل</th><th>رقم الشحنة</th><th>التاريخ</th><th>الحالة</th></tr></thead>
-                <tbody>
-                    <?php if(empty($history)): ?>
-                        <tr><td colspan="4" style="text-align:center; padding:20px;">لا توجد شحنات سابقة.</td></tr>
-                    <?php else: foreach($history as $h): ?>
-                        <tr>
-                            <td><?php echo esc_html($h->customer_name); ?></td>
-                            <td><strong><?php echo $h->shipment_number; ?></strong></td>
-                            <td><?php echo date('Y-m-d', strtotime($h->created_at)); ?></td>
-                            <td><span class="shipping-badge"><?php echo $h->status; ?></span></td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div id="customer-address" class="shipping-internal-tab" style="display: <?php echo $sub == 'address-book' ? 'block' : 'none'; ?>;">
-    <div class="shipping-card">
-        <h4>دفتر العناوين الموحد</h4>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
-                <thead><tr><th>العميل</th><th>العنوان المسجل</th><th>الهاتف</th></tr></thead>
-                <tbody>
-                    <?php foreach($customers as $c): ?>
-                        <tr>
-                            <td><strong><?php echo esc_html($c->name); ?></strong></td>
-                            <td><?php echo esc_html($c->residence_street . ', ' . $c->residence_city); ?></td>
-                            <td><?php echo esc_html($c->phone); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div id="customer-contracts" class="shipping-internal-tab" style="display: <?php echo $sub == 'contracts' ? 'block' : 'none'; ?>;">
-    <div class="shipping-card">
-        <h4>إدارة عقود الخدمة والاتفاقيات</h4>
-        <div class="shipping-table-container">
-            <table class="shipping-table">
-                <thead>
-                    <tr>
-                        <th>رقم العقد</th>
-                        <th>العميل</th>
-                        <th>عنوان العقد</th>
-                        <th>تاريخ الانتهاء</th>
-                        <th>الحالة</th>
-                        <th>إجراءات</th>
+<div class="shipping-card">
+    <div class="shipping-table-container">
+        <table class="shipping-table">
+            <thead>
+                <tr>
+                    <th>العميل</th>
+                    <th>بيانات الاتصال</th>
+                    <th>الحساب</th>
+                    <th>التصنيف</th>
+                    <th>إجراءات</th>
+                </tr>
+            </thead>
+            <tbody id="unified-customer-list">
+                <?php
+                global $wpdb;
+                $customers = $wpdb->get_results("SELECT c.*, CONCAT(c.first_name, ' ', c.last_name) as name, u.user_email as wp_email FROM {$wpdb->prefix}shipping_customers c LEFT JOIN {$wpdb->prefix}users u ON c.wp_user_id = u.ID ORDER BY c.id DESC");
+                if(empty($customers)): ?>
+                    <tr><td colspan="5" style="text-align:center; padding:40px; color:#94a3b8;">لا يوجد عملاء مسجلين حالياً.</td></tr>
+                <?php else: foreach($customers as $c): ?>
+                    <tr class="customer-entry-row" data-search="<?php echo esc_attr(strtolower($c->name . ' ' . $c->email . ' ' . $c->phone . ' ' . $c->username)); ?>">
+                        <td>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div style="width:40px; height:40px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #e2e8f0;">
+                                    <?php if($c->photo_url): ?>
+                                        <img src="<?php echo esc_url($c->photo_url); ?>" style="width:100%; height:100%; object-fit:cover;">
+                                    <?php else: ?>
+                                        <span class="dashicons dashicons-admin-users" style="color:#94a3b8;"></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <div style="font-weight:800; color:var(--shipping-dark-color);"><?php echo esc_html($c->name); ?></div>
+                                    <div style="font-size:11px; color:#64748b;">@<?php echo esc_html($c->username); ?></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size:13px;"><?php echo esc_html($c->email ?: $c->wp_email); ?></div>
+                            <div style="font-size:11px; color:#64748b;"><?php echo esc_html($c->phone); ?></div>
+                        </td>
+                        <td>
+                            <span class="shipping-badge <?php echo $c->account_status === 'active' ? 'shipping-badge-high' : 'shipping-badge-urgent'; ?>">
+                                <?php echo $c->account_status === 'active' ? 'نشط' : 'مقيد'; ?>
+                            </span>
+                        </td>
+                        <td><span class="shipping-badge" style="background:#edf2f7; color:#4a5568;"><?php echo esc_html(strtoupper($c->classification ?: 'REGULAR')); ?></span></td>
+                        <td>
+                            <button onclick="CustomersController.viewCustomerDossier(<?php echo $c->id; ?>)" class="shipping-btn-outline" style="padding:5px 12px; font-size:11px;">إدارة الملف الشامل</button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody id="contracts-table-body">
-                    <!-- Data via AJAX -->
-                </tbody>
-            </table>
+                <?php endforeach; endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Unified Customer Dossier Modal -->
+<div id="modal-customer-dossier" class="shipping-modal-overlay">
+    <div class="shipping-modal-content" style="max-width: 950px; height: 90vh; display: flex; flex-direction: column;">
+        <div class="shipping-modal-header">
+            <h3 id="dossier-customer-name">ملف العميل</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-customer-dossier')">&times;</button>
+        </div>
+        <div id="dossier-loading" style="padding:50px; text-align:center;"><div class="shipping-loader-mini"></div><br>جاري تجميع بيانات الملف...</div>
+        <div id="dossier-content" style="display:none; flex:1; overflow:hidden;">
+            <div style="display:grid; grid-template-columns: 300px 1fr; height:100%;">
+                <!-- Right Menu (Fixed) -->
+                <div style="background:#f8fafc; border-left:1px solid #e2e8f0; padding:20px; display:flex; flex-direction:column; gap:10px;">
+                    <div id="dossier-avatar-container" style="text-align:center; margin-bottom:20px;">
+                        <!-- Avatar via JS -->
+                    </div>
+                    <button class="dossier-nav-btn active" onclick="CustomersController.switchDossierTab('profile', this)">البيانات الشخصية</button>
+                    <button class="dossier-nav-btn" onclick="CustomersController.switchDossierTab('account', this)">إدارة الحساب والأمان</button>
+                    <button class="dossier-nav-btn" onclick="CustomersController.switchDossierTab('shipments', this)">سجل الشحنات</button>
+                    <button class="dossier-nav-btn" onclick="CustomersController.switchDossierTab('addresses', this)">دفتر العناوين</button>
+                    <button class="dossier-nav-btn" onclick="CustomersController.switchDossierTab('contracts', this)">العقود والاتفاقيات</button>
+                    <div style="margin-top:auto; padding-top:20px; border-top:1px solid #e2e8f0;">
+                        <button class="shipping-btn" style="background:#e53e3e; width:100%;" id="btn-delete-customer">حذف الحساب نهائياً</button>
+                    </div>
+                </div>
+
+                <!-- Left Content (Scrollable) -->
+                <div style="padding:30px; overflow-y:auto;" id="dossier-tab-container">
+                    <!-- Tab: Profile -->
+                    <div id="dossier-tab-profile" class="dossier-tab active">
+                        <h4 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">تعديل الملف الشخصي</h4>
+                        <form id="form-update-profile">
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                                <div class="shipping-form-group"><label>الاسم الأول</label><input type="text" name="first_name" class="shipping-input"></div>
+                                <div class="shipping-form-group"><label>اسم العائلة</label><input type="text" name="last_name" class="shipping-input"></div>
+                                <div class="shipping-form-group"><label>الهاتف</label><input type="text" name="phone" class="shipping-input"></div>
+                                <div class="shipping-form-group"><label>الهاتف البديل</label><input type="text" name="alt_phone" class="shipping-input"></div>
+                                <div class="shipping-form-group">
+                                    <label>التصنيف</label>
+                                    <select name="classification" class="shipping-select">
+                                        <option value="regular">عادي</option>
+                                        <option value="vip">VIP</option>
+                                        <option value="corporate">شركات</option>
+                                    </select>
+                                </div>
+                                <div class="shipping-form-group">
+                                    <label>حالة الحساب</label>
+                                    <select name="account_status" class="shipping-select">
+                                        <option value="active">نشط</option>
+                                        <option value="restricted">مقيد</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="shipping-form-group"><label>العنوان السكني</label><textarea name="residence_street" class="shipping-textarea" rows="2"></textarea></div>
+                            <div class="shipping-form-group"><label>ملاحظات إدارية</label><textarea name="notes" class="shipping-textarea" rows="2"></textarea></div>
+                            <button type="submit" class="shipping-btn">حفظ التغييرات</button>
+                        </form>
+                    </div>
+
+                    <!-- Tab: Account -->
+                    <div id="dossier-tab-account" class="dossier-tab" style="display:none;">
+                        <h4 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">إدارة الدخول والأمان</h4>
+                        <form id="form-update-account-security" style="background:#f8fafc; padding:20px; border-radius:10px; border:1px solid #e2e8f0;">
+                            <div class="shipping-form-group">
+                                <label>البريد الإلكتروني المخصص للدخول</label>
+                                <input type="email" name="account_email" class="shipping-input" required>
+                                <small style="color:#64748b;">سيتم استخدام هذا البريد لاستعادة كلمة المرور والتنبيهات الرسمية.</small>
+                            </div>
+                            <div class="shipping-form-group">
+                                <label>تعيين كلمة مرور جديدة</label>
+                                <div style="display:flex; gap:10px;">
+                                    <input type="text" name="new_password" id="dossier-new-pass" class="shipping-input" placeholder="اترك الحقل فارغاً لعدم التغيير">
+                                    <button type="button" class="shipping-btn-outline" style="width:auto;" onclick="CustomersController.generateRandomPass()">توليد</button>
+                                </div>
+                            </div>
+                            <button type="submit" class="shipping-btn" style="background:#2d3748;">تحديث بيانات الحساب</button>
+                        </form>
+                    </div>
+
+                    <!-- Tab: Shipments -->
+                    <div id="dossier-tab-shipments" class="dossier-tab" style="display:none;">
+                        <h4 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">سجل الشحنات المباشر</h4>
+                        <div class="shipping-table-container">
+                            <table class="shipping-table" style="font-size:12px;">
+                                <thead><tr><th>رقم الشحنة</th><th>الوجهة</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                                <tbody id="dossier-shipments-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Addresses -->
+                    <div id="dossier-tab-addresses" class="dossier-tab" style="display:none;">
+                        <h4 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">دفتر العناوين المعتمد</h4>
+                        <div id="dossier-address-list"></div>
+                        <button class="shipping-btn-outline" style="margin-top:20px;" onclick="alert('ميزة قيد التطوير')">+ إضافة عنوان جديد</button>
+                    </div>
+
+                    <!-- Tab: Contracts -->
+                    <div id="dossier-tab-contracts" class="dossier-tab" style="display:none;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                            <h4 style="margin:0;">العقود والاتفاقيات</h4>
+                            <button class="shipping-btn" style="width:auto; padding:5px 15px; font-size:12px;" onclick="ShippingModal.open('modal-add-contract')">+ إضافة عقد</button>
+                        </div>
+                        <div class="shipping-table-container">
+                            <table class="shipping-table" style="font-size:12px;">
+                                <thead><tr><th>رقم العقد</th><th>العنوان</th><th>تاريخ الانتهاء</th><th>الحالة</th></tr></thead>
+                                <tbody id="dossier-contracts-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="customer-class" class="shipping-internal-tab" style="display: <?php echo $sub == 'classification' ? 'block' : 'none'; ?>;">
-    <?php
-    $class_stats = $wpdb->get_results("SELECT classification, COUNT(*) as count FROM {$wpdb->prefix}shipping_customers GROUP BY classification");
-    ?>
-    <div class="shipping-card">
-        <h4>تحليل تصنيفات العملاء</h4>
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; margin-top:20px;">
-            <?php foreach($class_stats as $cs): ?>
-                <div style="background:#fff; border:1px solid #e2e8f0; padding:20px; border-radius:12px; text-align:center;">
-                    <div style="font-size:14px; color:#64748b; margin-bottom:10px;"><?php echo strtoupper($cs->classification ?: 'REGULAR'); ?></div>
-                    <div style="font-size:2em; font-weight:800; color:var(--shipping-primary-color);"><?php echo $cs->count; ?></div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</div>
+<style>
+.dossier-nav-btn {
+    text-align: right; padding: 12px 15px; background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 10px; cursor: pointer; font-weight: 700; color: #4a5568; transition: 0.2s;
+    font-family: inherit;
+}
+.dossier-nav-btn:hover { background: #edf2f7; color: var(--shipping-primary-color); }
+.dossier-nav-btn.active { background: var(--shipping-primary-color); color: #fff; border-color: var(--shipping-primary-color); }
+.dossier-tab { animation: shippingFadeIn 0.3s ease; }
+</style>
 
 <!-- Modals -->
 <div id="add-customer-modal" class="shipping-modal-overlay">
