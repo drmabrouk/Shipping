@@ -315,18 +315,143 @@ window.ShipmentsController = {
     handleCreateShipment(e) {
         e.preventDefault();
         const form = e.target;
+        const btn = form.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="dashicons dashicons-update spin"></span> جاري المعالجة...';
+
         const fd = new FormData(form);
         fd.append('action', 'shipping_create_shipment');
         fd.append('nonce', shippingVars.shipmentNonce);
 
         fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
             if (res.success) {
-                shippingShowNotification('تم إنشاء الشحنة بنجاح');
+                const d = res.data;
                 ShippingModal.close('modal-create-shipment');
                 form.reset();
-                location.reload(); // To update registry
-            } else alert(res.data);
+
+                // Show Success & Print Selection Modal
+                this.showCreationSuccess(d);
+            } else {
+                btn.disabled = false;
+                btn.innerText = 'تأكيد وإنشاء الشحنة';
+                alert(res.data);
+            }
         });
+    },
+
+    showCreationSuccess(data) {
+        const modalId = 'modal-shipment-success-actions';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            const div = document.createElement('div');
+            div.id = modalId;
+            div.className = 'shipping-modal-overlay';
+            div.innerHTML = `
+                <div class="shipping-modal-content" style="max-width: 500px; text-align: center;">
+                    <div class="shipping-modal-header"><h3>تم إنشاء الشحنة بنجاح</h3></div>
+                    <div class="shipping-modal-body" style="padding: 30px;">
+                        <div style="font-size: 50px; color: #38a169; margin-bottom: 20px;">✓</div>
+                        <h4 id="success-ship-num" style="margin:0 0 10px 0; color: var(--shipping-primary-color);"></h4>
+                        <p style="color: #64748b; margin-bottom: 25px;">تم توليد الفاتورة والباركود آلياً. يرجى اختيار الإجراء التالي:</p>
+                        <div style="display: grid; gap: 10px;">
+                            <button id="btn-print-sticker" class="shipping-btn" style="background: #2d3748;">طباعة ملصق الشحنة (Sticker)</button>
+                            <button id="btn-print-invoice" class="shipping-btn" style="background: #4a5568;">طباعة الفاتورة الضريبية</button>
+                            <button onclick="location.reload()" class="shipping-btn shipping-btn-outline">العودة للجدول الرئيسي</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(div);
+            modal = div;
+        }
+
+        document.getElementById('success-ship-num').innerText = data.shipment_number;
+        document.getElementById('btn-print-sticker').onclick = () => this.printSticker(data.shipment_id);
+        document.getElementById('btn-print-invoice').onclick = () => this.printInvoice(data.shipment_id);
+
+        ShippingModal.open(modalId);
+    },
+
+    printSticker(id) {
+        const modalId = 'modal-shipment-sticker-print';
+        let modal = document.getElementById(modalId);
+        if (!modal) {
+            const div = document.createElement('div');
+            div.id = modalId;
+            div.className = 'shipping-modal-overlay';
+            div.innerHTML = `
+                <div class="shipping-modal-content" style="max-width: 450px;">
+                    <div class="shipping-modal-header"><h3>ملصق الشحنة</h3><button class="shipping-modal-close" onclick="ShippingModal.close('${modalId}')">&times;</button></div>
+                    <div id="sticker-print-content" style="padding: 20px; background: #fff;"></div>
+                    <div class="shipping-modal-footer" style="text-align: left; padding: 15px 25px;">
+                        <button class="shipping-btn" onclick="ShipmentsController.executeStickerPrint()">طباعة الآن</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(div);
+            modal = div;
+        }
+
+        const container = document.getElementById('sticker-print-content');
+        container.innerHTML = '<div style="text-align:center; padding:30px;">جاري التجهيز...</div>';
+        ShippingModal.open(modalId);
+
+        fetch(ajaxurl + '?action=shipping_get_shipment_full_details&id=' + id + '&nonce=' + shippingVars.shipmentNonce)
+        .then(r => r.json()).then(res => {
+            if (!res.success) return alert(res.data);
+            const s = res.data.shipment;
+
+            container.innerHTML = `
+                <div id="printable-sticker-direct" style="width: 100mm; background: #fff; color: #000; border: 2px solid #000; padding: 5mm; font-family: 'Rubik', sans-serif; direction: rtl;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 3mm; margin-bottom: 3mm;">
+                        <div style="font-weight: 900; font-size: 1.2em;">${window.shippingName || 'SHIPPING SYSTEM'}</div>
+                        <div style="font-weight: 800; font-size: 0.9em;">${s.shipment_number.startsWith('INT') ? 'INTERNATIONAL' : 'LOCAL'}</div>
+                    </div>
+
+                    <div style="text-align: center; margin-bottom: 4mm; padding: 4mm; background: #eee;">
+                        <div style="font-size: 1.8em; font-weight: 900; letter-spacing: 1px;">${s.shipment_number}</div>
+                        <div style="font-size: 10px; margin-top: 2mm;">(Scan for tracking)</div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-bottom: 4mm;">
+                        <div style="border: 1px solid #000; padding: 2mm;">
+                            <div style="font-size: 10px; font-weight: 700; color: #555;">SHIP FROM:</div>
+                            <div style="font-size: 13px; font-weight: 800; margin-top: 1mm;">${s.origin}</div>
+                        </div>
+                        <div style="border: 1px solid #000; padding: 2mm;">
+                            <div style="font-size: 10px; font-weight: 700; color: #555;">SHIP TO:</div>
+                            <div style="font-size: 13px; font-weight: 800; margin-top: 1mm;">${s.destination}</div>
+                        </div>
+                    </div>
+
+                    <div style="border: 1px solid #000; padding: 3mm; margin-bottom: 4mm;">
+                        <div style="font-size: 11px;"><strong>CUSTOMER:</strong> ${s.customer_name}</div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 2mm;">
+                            <div style="font-size: 11px;"><strong>WEIGHT:</strong> ${s.weight} KG</div>
+                            <div style="font-size: 11px;"><strong>DATE:</strong> ${s.created_at.split(' ')[0]}</div>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; border-top: 1px dashed #000; padding-top: 3mm; font-size: 10px; font-weight: 700;">
+                        OFFICIAL SHIPPING DOCUMENT - DO NOT TAMPER
+                    </div>
+                </div>
+            `;
+        });
+    },
+
+    executeStickerPrint() {
+        const content = document.getElementById('printable-sticker-direct');
+        if (!content) return;
+        const win = window.open('', '_blank');
+        win.document.write('<html><head><title>Print Sticker</title>');
+        win.document.write('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;900&display=swap">');
+        win.document.write('<style>body{margin:0; padding:0;} @page { size: 100mm 150mm; margin: 0; }</style>');
+        win.document.write('</head><body>');
+        win.document.write(content.innerHTML);
+        win.document.write('</body></html>');
+        win.document.close();
+        setTimeout(() => { win.print(); win.close(); }, 500);
     },
 
     trackShipment() {

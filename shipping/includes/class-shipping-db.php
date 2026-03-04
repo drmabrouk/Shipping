@@ -127,6 +127,28 @@ class Shipping_DB {
         return $wpdb->get_row($wpdb->prepare("SELECT *, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers WHERE id = %d", $id));
     }
 
+    public static function get_customer_comprehensive($id) {
+        global $wpdb;
+        $customer = self::get_customer_by_id($id);
+        if (!$customer) return null;
+
+        $shipments = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}shipping_shipments WHERE customer_id = %d ORDER BY created_at DESC",
+            $id
+        ));
+
+        $contracts = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}shipping_contracts WHERE customer_id = %d ORDER BY id DESC",
+            $id
+        ));
+
+        return [
+            'customer' => $customer,
+            'shipments' => $shipments,
+            'contracts' => $contracts
+        ];
+    }
+
     public static function get_customer_by_username($username) {
         global $wpdb;
         return $wpdb->get_row($wpdb->prepare("SELECT *, CONCAT(first_name, ' ', last_name) as name FROM {$wpdb->prefix}shipping_customers WHERE username = %s", $username));
@@ -1033,7 +1055,7 @@ class Shipping_DB {
         return $wpdb->delete("{$wpdb->prefix}shipping_articles", ['id' => intval($id)]);
     }
 
-    // Global Alert System Methods
+    // Global Alert System Methods (Core only)
     public static function save_alert($data) {
         global $wpdb;
         $table = $wpdb->prefix . 'shipping_alerts';
@@ -1051,33 +1073,8 @@ class Shipping_DB {
         return $wpdb->insert($table, $insert_data);
     }
 
-    public static function get_alerts($args = []) {
-        global $wpdb;
-        $where = "1=1";
-        if (!empty($args['status'])) {
-            $where .= $wpdb->prepare(" AND status = %s", $args['status']);
-        }
-        return $wpdb->get_results("SELECT * FROM {$wpdb->prefix}shipping_alerts WHERE $where ORDER BY created_at DESC");
-    }
-
-    public static function get_alert($id) {
-        global $wpdb;
-        return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}shipping_alerts WHERE id = %d", $id));
-    }
-
-    public static function delete_alert($id) {
-        global $wpdb;
-        $wpdb->delete("{$wpdb->prefix}shipping_alert_views", ['alert_id' => intval($id)]);
-        return $wpdb->delete("{$wpdb->prefix}shipping_alerts", ['id' => intval($id)]);
-    }
-
     public static function get_active_alerts_for_user($user_id) {
         global $wpdb;
-        // Fetch active alerts that the user hasn't acknowledged yet (if acknowledgment is required)
-        // or just all active alerts if they haven't seen them.
-        // Actually, requirement says "immediately for logged-in users".
-        // We should track which ones are seen.
-
         return $wpdb->get_results($wpdb->prepare("
             SELECT a.*
             FROM {$wpdb->prefix}shipping_alerts a

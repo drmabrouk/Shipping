@@ -305,7 +305,6 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                             <li><a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'notifications']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'notifications' ? 'shipping-sub-active' : ''; ?>"><span class="dashicons dashicons-email"></span> التنبيهات والبريد</a></li>
                             <li><a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'design']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'design' ? 'shipping-sub-active' : ''; ?>"><span class="dashicons dashicons-art"></span> التصميم والمظهر</a></li>
                             <li><a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'pages']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'pages' ? 'shipping-sub-active' : ''; ?>"><span class="dashicons dashicons-admin-page"></span> تخصيص الصفحات</a></li>
-                            <li><a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'alerts']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'alerts' ? 'shipping-sub-active' : ''; ?>"><span class="dashicons dashicons-megaphone"></span> تنبيهات النظام (System Alerts)</a></li>
                             <li><a href="<?php echo add_query_arg(['shipping_tab' => 'advanced-settings', 'sub' => 'backup']); ?>" class="<?php echo ($_GET['sub'] ?? '') == 'backup' ? 'shipping-sub-active' : ''; ?>"><span class="dashicons dashicons-database-export"></span> مركز النسخ الاحتياطي</a></li>
                         </ul>
                     </li>
@@ -380,7 +379,6 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                             <button class="shipping-tab-btn <?php echo $sub == 'notifications' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('notification-settings', this)">التنبيهات والبريد</button>
                             <button class="shipping-tab-btn <?php echo $sub == 'design' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('design-settings', this)">التصميم والمظهر</button>
                             <button class="shipping-tab-btn <?php echo $sub == 'pages' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('page-customization', this)">تخصيص الصفحات</button>
-                            <button class="shipping-tab-btn <?php echo ($sub == 'alerts') ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('system-alerts-settings', this)">تنبيهات النظام</button>
                             <button class="shipping-tab-btn <?php echo ($sub == 'logs') ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('system-activity-logs', this)">سجل النشاطات</button>
                             <button class="shipping-tab-btn <?php echo ($sub == 'backup') ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('backup-settings', this)">مركز النسخ الاحتياطي</button>
                         </div>
@@ -588,63 +586,6 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
                             </form>
                         </div>
 
-                        <div id="system-alerts-settings" class="shipping-internal-tab" style="display: <?php echo ($sub == 'alerts') ? 'block' : 'none'; ?>;">
-                            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; margin-bottom:20px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                                    <h4 style="margin:0;">إدارة تنبيهات النظام الشاملة</h4>
-                                    <button onclick="ShippingModal.open('shipping-alert-modal')" class="shipping-btn" style="width:auto; padding:8px 20px;">+ إنشاء تنبيه جديد</button>
-                                </div>
-
-                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:20px;">
-                                    <button onclick="AdminController.applyAlertTemplate('payment')" class="shipping-btn shipping-btn-outline" style="font-size:12px;">قالب: تذكير بالسداد</button>
-                                    <button onclick="AdminController.applyAlertTemplate('expiry')" class="shipping-btn shipping-btn-outline" style="font-size:12px;">قالب: تنبيه انتهاء الحساب</button>
-                                    <button onclick="AdminController.applyAlertTemplate('maintenance')" class="shipping-btn shipping-btn-outline" style="font-size:12px;">قالب: صيانة النظام</button>
-                                    <button onclick="AdminController.applyAlertTemplate('docs')" class="shipping-btn shipping-btn-outline" style="font-size:12px;">قالب: تذكير الوثائق</button>
-                                    <button onclick="AdminController.applyAlertTemplate('urgent')" class="shipping-btn shipping-btn-outline" style="font-size:12px;">قالب: قرار إداري عاجل</button>
-                                </div>
-
-                                <div class="shipping-table-container" style="margin:0;">
-                                    <table class="shipping-table">
-                                        <thead>
-                                            <tr>
-                                                <th>العنوان</th>
-                                                <th>المستوى</th>
-                                                <th>الإقرار</th>
-                                                <th>الحالة</th>
-                                                <th>إجراءات</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php
-                                            $alerts = Shipping_DB::get_alerts();
-                                            if (empty($alerts)): ?>
-                                                <tr><td colspan="5" style="text-align:center; padding:30px; color:#94a3b8;">لا توجد تنبيهات نشطة حالياً.</td></tr>
-                                            <?php else: foreach($alerts as $al):
-                                                $severity_map = ['info' => 'عادي (White)', 'warning' => 'تحذير (Orange)', 'critical' => 'هام جداً (Red)'];
-                                                $severity_color = ['info' => '#64748b', 'warning' => '#f59e0b', 'critical' => '#e53e3e'];
-                                            ?>
-                                                <tr>
-                                                    <td><strong><?php echo esc_html($al->title); ?></strong></td>
-                                                    <td><span style="color:<?php echo $severity_color[$al->severity]; ?>; font-weight:700;"><?php echo $severity_map[$al->severity]; ?></span></td>
-                                                    <td><?php echo $al->must_acknowledge ? '✅ نعم' : '❌ لا'; ?></td>
-                                                    <td>
-                                                        <span class="shipping-badge <?php echo $al->status == 'active' ? 'shipping-badge-high' : 'shipping-badge-low'; ?>">
-                                                            <?php echo $al->status == 'active' ? 'نشط' : 'معطل'; ?>
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <div style="display:flex; gap:5px;">
-                                                            <button onclick='AdminController.editAlert(<?php echo json_encode($al); ?>)' class="shipping-btn shipping-btn-outline" style="padding:4px 10px; font-size:11px;">تعديل</button>
-                                                            <button onclick="AdminController.deleteAlert(<?php echo $al->id; ?>)" class="shipping-btn" style="background:#e53e3e; padding:4px 10px; font-size:11px;">حذف</button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; endif; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
 
 
                         <div id="system-activity-logs" class="shipping-internal-tab" style="display: <?php echo ($sub == 'logs') ? 'block' : 'none'; ?>;">
@@ -780,41 +721,6 @@ $greeting = ($hour >= 5 && $hour < 12) ? 'صباح الخير' : 'مساء ال�
             ?>
 
         </div>
-    </div>
-</div>
-
-<!-- Alert Management Modal -->
-<div id="shipping-alert-modal" class="shipping-modal-overlay">
-    <div class="shipping-modal-content" style="max-width: 600px;">
-        <div class="shipping-modal-header"><h3><span id="shipping-alert-modal-title">إنشاء تنبيه جديد</span></h3><button class="shipping-modal-close" onclick="ShippingModal.close('shipping-alert-modal')">&times;</button></div>
-        <form id="shipping-alert-form" style="padding: 20px;">
-            <input type="hidden" name="id" id="edit-alert-id">
-            <div class="shipping-form-group"><label class="shipping-label">عنوان التنبيه:</label><input type="text" name="title" class="shipping-input" required></div>
-            <div class="shipping-form-group"><label class="shipping-label">نص الرسالة:</label><textarea name="message" class="shipping-textarea" rows="4" required></textarea></div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                <div class="shipping-form-group">
-                    <label class="shipping-label">مستوى الخطورة:</label>
-                    <select name="severity" class="shipping-select">
-                        <option value="info">عادي (White)</option>
-                        <option value="warning">تحذير (Orange)</option>
-                        <option value="critical">هام (Red)</option>
-                    </select>
-                </div>
-                <div class="shipping-form-group">
-                    <label class="shipping-label">الحالة:</label>
-                    <select name="status" class="shipping-select">
-                        <option value="active">نشط</option>
-                        <option value="inactive">معطل</option>
-                    </select>
-                </div>
-            </div>
-            <div class="shipping-form-group">
-                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                    <input type="checkbox" name="must_acknowledge" value="1"> يتطلب إقرار بالاستلام من العميل قبل الإغلاق
-                </label>
-            </div>
-            <button type="submit" class="shipping-btn" style="width: 100%; margin-top:10px;">حفظ ونشر التنبيه</button>
-        </form>
     </div>
 </div>
 
