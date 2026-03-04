@@ -4,38 +4,40 @@
         <h3 style="margin:0; border:none; padding:0;">إدارة مستخدمي النظام</h3>
         <?php if (current_user_can('manage_options')): ?>
             <div style="display:flex; gap:10px; flex-wrap: wrap;">
-                <button onclick="executeBulkDeleteUsers()" class="shipping-btn" style="width:auto; background:#e53e3e;">حذف المستخدمين المحددين</button>
-                <button onclick="document.getElementById('unified-import-form').style.display='block'" class="shipping-btn" style="width:auto; background:var(--shipping-secondary-color);">استيراد جماعي (CSV)</button>
-                <button onclick="document.getElementById('add-user-modal').style.display='flex'" class="shipping-btn" style="width:auto;">+ إضافة مستخدم جديد</button>
+                <button onclick="UsersController.executeBulkDelete()" class="shipping-btn" style="width:auto; background:#e53e3e;">حذف المستخدمين المحددين</button>
+                <button onclick="ShippingModal.open('unified-import-form')" class="shipping-btn" style="width:auto; background:var(--shipping-secondary-color);">استيراد جماعي (CSV)</button>
+                <button onclick="ShippingModal.open('add-user-modal')" class="shipping-btn" style="width:auto;">+ إضافة مستخدم جديد</button>
             </div>
         <?php endif; ?>
     </div>
 
     <!-- Unified Import Form -->
-    <div id="unified-import-form" style="display:none; background: #f8fafc; padding: 30px; border: 2px dashed #cbd5e0; border-radius: 12px; margin-bottom: 30px;">
-        <h3 style="margin-top:0; color:var(--shipping-secondary-color);">مركز استيراد المستخدمين والعملاء</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <h4 style="margin-top:0;">استيراد عملاء (Customers)</h4>
-                <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">(اسم المستخدم، الاسم الأول، اسم العائلة، رقم الهاتف، البريد الإلكتروني)</p>
-                <form method="post" enctype="multipart/form-data">
-                    <?php wp_nonce_field('shipping_admin_action', 'shipping_admin_nonce'); ?>
-                    <input type="file" name="customer_csv_file" accept=".csv" required style="margin-bottom:10px; width:100%;">
-                    <button type="submit" name="shipping_import_customers_csv" class="shipping-btn" style="background:#27ae60; width:100%;">بدء استيراد العملاء</button>
-                </form>
+    <div id="unified-import-form" class="shipping-modal-overlay">
+        <div class="shipping-modal-content" style="max-width: 800px;">
+            <div class="shipping-modal-header">
+                <h3>مركز استيراد المستخدمين والعملاء</h3>
+                <button class="shipping-modal-close" onclick="ShippingModal.close('unified-import-form')">&times;</button>
             </div>
-            <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <h4 style="margin-top:0;">استيراد مستخدمين/مسؤولين (Staff)</h4>
-                <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">(اسم المستخدم، البريد، الاسم الأول، اسم العائلة، الكود، المسمى، الهاتف، كلمة المرور)</p>
-                <form method="post" enctype="multipart/form-data">
-                    <?php wp_nonce_field('shipping_admin_action', 'shipping_admin_nonce'); ?>
-                    <input type="file" name="csv_file" accept=".csv" required style="margin-bottom:10px; width:100%;">
-                    <button type="submit" name="shipping_import_staffs_csv" class="shipping-btn" style="background:var(--shipping-primary-color); width:100%;">بدء استيراد المسؤولين</button>
-                </form>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px;">
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-top:0;">استيراد عملاء (Customers)</h4>
+                    <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">(اسم المستخدم، الاسم الأول، اسم العائلة، رقم الهاتف، البريد الإلكتروني)</p>
+                    <form method="post" enctype="multipart/form-data">
+                        <?php wp_nonce_field('shipping_admin_action', 'shipping_admin_nonce'); ?>
+                        <input type="file" name="customer_csv_file" accept=".csv" required style="margin-bottom:10px; width:100%;">
+                        <button type="submit" name="shipping_import_customers_csv" class="shipping-btn" style="background:#27ae60; width:100%;">بدء استيراد العملاء</button>
+                    </form>
+                </div>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-top:0;">استيراد مستخدمين/مسؤولين (Staff)</h4>
+                    <p style="font-size: 12px; color: #64748b; margin-bottom: 15px;">(اسم المستخدم، البريد، الاسم الأول، اسم العائلة، الكود، المسمى، الهاتف، كلمة المرور)</p>
+                    <form method="post" enctype="multipart/form-data">
+                        <?php wp_nonce_field('shipping_admin_action', 'shipping_admin_nonce'); ?>
+                        <input type="file" name="csv_file" accept=".csv" required style="margin-bottom:10px; width:100%;">
+                        <button type="submit" name="shipping_import_staffs_csv" class="shipping-btn" style="background:var(--shipping-primary-color); width:100%;">بدء استيراد المسؤولين</button>
+                    </form>
+                </div>
             </div>
-        </div>
-        <div style="text-align: center; margin-top: 20px;">
-            <button type="button" onclick="document.getElementById('unified-import-form').style.display='none'" class="shipping-btn shipping-btn-outline" style="width: auto;">إغلاق نافذة الاستيراد</button>
         </div>
     </div>
 
@@ -73,7 +75,7 @@
         <table class="shipping-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;"><input type="checkbox" onclick="toggleAllUsers(this)"></th>
+                    <th style="width: 40px;"><input type="checkbox" onclick="UsersController.toggleAll(this)"></th>
                     <th>اسم المستخدم / الكود</th>
                     <th>الاسم</th>
                     <th>الدور</th>
@@ -132,7 +134,7 @@
                             <td>
                                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
                                     <?php if ($customer_id): ?>
-                                        <a href="<?php echo add_query_arg(['shipping_tab' => 'customer-profile', 'customer_id' => $customer_id]); ?>" class="shipping-btn shipping-btn-outline" style="padding: 5px 12px; font-size: 12px; height: 32px; text-decoration:none;">الملف</a>
+                                        <a href="<?php echo add_query_arg(['shipping_tab' => 'customer-profile', 'customer_id' => $customer_id]); ?>" onclick="ShippingState.setCustomer(<?php echo $customer_id; ?>)" class="shipping-btn shipping-btn-outline" style="padding: 5px 12px; font-size: 12px; height: 32px; text-decoration:none;">الملف</a>
                                     <?php endif; ?>
                                     <?php
                                     $u_first_name = get_user_meta($u->ID, 'first_name', true);
@@ -154,7 +156,7 @@
                                         "phone" => get_user_meta($u->ID, "shipping_phone", true),
                                         "status" => get_user_meta($u->ID, "shipping_account_status", true) ?: "active"
                                     ))); ?>)' class="shipping-btn shipping-btn-outline" style="padding: 5px 12px; font-size: 12px; height: 32px;">تعديل</button>
-                                    <button onclick="shippingDeleteUser(<?php echo $u->ID; ?>, '<?php echo esc_js($u->display_name); ?>')" class="shipping-btn" style="background:#e53e3e; padding: 5px 12px; font-size: 12px; height: 32px;">حذف</button>
+                                    <button onclick="UsersController.deleteUser(<?php echo $u->ID; ?>, '<?php echo esc_js($u->display_name); ?>')" class="shipping-btn" style="background:#e53e3e; padding: 5px 12px; font-size: 12px; height: 32px;">حذف</button>
                                 </div>
                             </td>
                         </tr>
@@ -182,7 +184,7 @@
         <div class="shipping-modal-content" style="max-width: 800px;">
             <div class="shipping-modal-header">
                 <h3>إضافة مستخدم جديد للنظام</h3>
-                <button class="shipping-modal-close" onclick="document.getElementById('add-user-modal').style.display='none'">&times;</button>
+                <button class="shipping-modal-close" onclick="ShippingModal.close('add-user-modal')">&times;</button>
             </div>
             <form id="add-user-form">
                 <?php wp_nonce_field('shippingCustomerAction', 'shipping_nonce'); ?>
@@ -201,7 +203,7 @@
                     </div>
                     <div class="shipping-form-group">
                         <label class="shipping-label">اختيار الدور:</label>
-                        <select name="role" class="shipping-select" onchange="toggleCustomerFields(this.value)">
+                        <select name="role" class="shipping-select" onchange="UsersController.toggleCustomerFields(this.value)">
                             <option value="subscriber">عميل (Subscriber)</option>
                             <?php if ($is_sys_manager): ?>
                                 <option value="administrator">مدير نظام (Administrator)</option>
@@ -248,7 +250,7 @@
         <div class="shipping-modal-content" style="max-width: 700px;">
             <div class="shipping-modal-header">
                 <h3>تعديل بيانات الحساب</h3>
-                <button class="shipping-modal-close" onclick="document.getElementById('edit-user-modal').style.display='none'">&times;</button>
+                <button class="shipping-modal-close" onclick="ShippingModal.close('edit-user-modal')">&times;</button>
             </div>
             <form id="edit-user-form">
                 <?php wp_nonce_field('shippingCustomerAction', 'shipping_nonce'); ?>
@@ -303,97 +305,6 @@
     </div>
 
     <script>
-    function toggleAllUsers(master) {
-        document.querySelectorAll('.user-cb').forEach(cb => cb.checked = master.checked);
-    }
-
-    function toggleCustomerFields(role) {
-        const div = document.getElementById('customer-specific-fields');
-        div.style.display = (role === 'subscriber') ? 'block' : 'none';
-    }
-
-    window.shippingDeleteUser = function(id, name) {
-        if (!confirm('هل أنت متأكد من حذف حساب: ' + name + '؟')) return;
-        const formData = new FormData();
-        formData.append('action', 'shipping_delete_staff_ajax');
-        formData.append('user_id', id);
-        formData.append('nonce', '<?php echo wp_create_nonce("shippingCustomerAction"); ?>');
-
-        fetch(ajaxurl, { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(res => {
-            if (res.success) {
-                shippingShowNotification('تم حذف المستخدم بنجاح');
-                setTimeout(() => location.reload(), 500);
-            } else {
-                alert('خطأ: ' + res.data);
-            }
-        });
-    };
-
-    function executeBulkDeleteUsers() {
-        const ids = Array.from(document.querySelectorAll('.user-cb:checked')).map(cb => cb.value);
-        if (ids.length === 0) {
-            alert('يرجى تحديد مستخدمين أولاً');
-            return;
-        }
-        if (!confirm('هل أنت متأكد من حذف ' + ids.length + ' مستخدم؟')) return;
-
-        const formData = new FormData();
-        formData.append('action', 'shipping_bulk_delete_users_ajax');
-        formData.append('user_ids', ids.join(','));
-        formData.append('nonce', '<?php echo wp_create_nonce("shippingCustomerAction"); ?>');
-
-        fetch(ajaxurl, { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(res => {
-            if (res.success) {
-                shippingShowNotification('تم حذف المستخدمين بنجاح');
-                setTimeout(() => location.reload(), 500);
-            }
-        });
-    }
-
-    window.shippingEditUser = function(u) {
-        document.getElementById('edit_user_db_id').value = u.id;
-        document.getElementById('edit_user_first_name').value = u.first_name;
-        document.getElementById('edit_user_last_name').value = u.last_name;
-        document.getElementById('edit_user_code').value = u.customer_id_attr;
-        document.getElementById('edit_user_phone').value = u.phone;
-        document.getElementById('edit_user_email').value = u.email;
-        document.getElementById('edit_user_status').value = u.status || 'active';
-        document.getElementById('edit_user_role').value = u.role;
-        document.getElementById('edit-user-modal').style.display = 'flex';
-    };
-
-    document.getElementById('add-user-form').onsubmit = function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        formData.append('action', 'shipping_add_staff_ajax');
-        fetch(ajaxurl, { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(res => {
-            if (res.success) {
-                shippingShowNotification('تمت إضافة المستخدم بنجاح');
-                setTimeout(() => location.reload(), 500);
-            } else {
-                shippingShowNotification('خطأ: ' + res.data, true);
-            }
-        });
-    };
-
-    document.getElementById('edit-user-form').onsubmit = function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        formData.append('action', 'shipping_update_staff_ajax');
-        fetch(ajaxurl, { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(res => {
-            if (res.success) {
-                shippingShowNotification('تم تحديث بيانات المستخدم');
-                setTimeout(() => location.reload(), 500);
-            }
-        });
-    };
+    window.shippingEditUser = (u) => UsersController.editUser(u);
     </script>
 </div>

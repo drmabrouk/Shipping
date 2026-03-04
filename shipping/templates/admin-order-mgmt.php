@@ -4,17 +4,17 @@ $sub = $_GET['sub'] ?? 'new-orders';
 ?>
 <div class="shipping-admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
     <div class="shipping-tabs-wrapper" style="display: flex; gap: 15px; overflow-x: auto; white-space: nowrap; padding-bottom: 5px;">
-        <button class="shipping-tab-btn <?php echo $sub == 'new-orders' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-new', this); loadOrders('new')">طلبات جديدة</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'in-progress' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-progress', this); loadOrders('in-progress')">قيد التنفيذ</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'completed' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-completed', this); loadOrders('completed')">مكتملة</button>
-        <button class="shipping-tab-btn <?php echo $sub == 'cancelled' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-cancelled', this); loadOrders('cancelled')">ملغاة</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'new-orders' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-new', this); OrdersController.loadOrders('new')">طلبات جديدة</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'in-progress' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-progress', this); OrdersController.loadOrders('in-progress')">قيد التنفيذ</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'completed' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-completed', this); OrdersController.loadOrders('completed')">مكتملة</button>
+        <button class="shipping-tab-btn <?php echo $sub == 'cancelled' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('order-cancelled', this); OrdersController.loadOrders('cancelled')">ملغاة</button>
     </div>
     <div style="display: flex; gap: 10px;">
         <div class="shipping-search-box" style="position: relative;">
-            <input type="text" id="order-search" class="shipping-input" placeholder="بحث برقم الطلب أو العميل..." oninput="debounceOrderSearch()" style="width: 250px; padding-right: 35px;">
+            <input type="text" id="order-search" class="shipping-input" placeholder="بحث برقم الطلب أو العميل..." oninput="OrdersController.debounceSearch()" style="width: 250px; padding-right: 35px;">
             <span class="dashicons dashicons-search" style="position: absolute; right: 10px; top: 10px; color: #94a3b8;"></span>
         </div>
-        <button class="shipping-btn" onclick="document.getElementById('modal-add-order').style.display='flex'">+ طلب جديد</button>
+        <button class="shipping-btn" onclick="OrdersController.openAddModal()">+ طلب جديد</button>
     </div>
 </div>
 
@@ -27,8 +27,8 @@ $sub = $_GET['sub'] ?? 'new-orders';
         <option value="completed">مكتمل</option>
         <option value="cancelled">ملغى</option>
     </select>
-    <button class="shipping-btn" onclick="applyBulkStatus()" style="width: auto;">تطبيق</button>
-    <button class="shipping-btn shipping-btn-outline" onclick="clearBulkSelection()" style="width: auto;">إلغاء التحديد</button>
+    <button class="shipping-btn" onclick="OrdersController.applyBulkStatus()" style="width: auto;">تطبيق</button>
+    <button class="shipping-btn shipping-btn-outline" onclick="OrdersController.clearBulkSelection()" style="width: auto;">إلغاء التحديد</button>
 </div>
 
 <!-- Tabs Content -->
@@ -41,7 +41,7 @@ foreach($statuses as $status => $id): ?>
             <table class="shipping-table">
                 <thead>
                     <tr>
-                        <th style="width: 40px;"><input type="checkbox" onclick="toggleAllOrders(this)"></th>
+                        <th style="width: 40px;"><input type="checkbox" onclick="OrdersController.toggleAll(this)"></th>
                         <th>رقم الطلب</th>
                         <th>العميل</th>
                         <th>المبلغ</th>
@@ -60,11 +60,11 @@ foreach($statuses as $status => $id): ?>
 <?php endforeach; ?>
 
 <!-- Modals -->
-<div id="modal-add-order" class="shipping-modal">
+<div id="modal-add-order" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 650px;">
         <div class="shipping-modal-header">
-            <h4>إنشاء طلب شحن جديد</h4>
-            <button onclick="document.getElementById('modal-add-order').style.display='none'">&times;</button>
+            <h3>إنشاء طلب شحن جديد</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-add-order')">&times;</button>
         </div>
         <form id="form-add-order">
             <input type="hidden" name="action" value="shipping_add_order">
@@ -107,11 +107,11 @@ foreach($statuses as $status => $id): ?>
 </div>
 
 <!-- Edit Order Modal -->
-<div id="modal-edit-order" class="shipping-modal">
+<div id="modal-edit-order" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 650px;">
         <div class="shipping-modal-header">
-            <h4>تعديل طلب الشحن</h4>
-            <button onclick="document.getElementById('modal-edit-order').style.display='none'">&times;</button>
+            <h3>تعديل طلب الشحن</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-edit-order')">&times;</button>
         </div>
         <form id="form-edit-order">
             <input type="hidden" name="id">
@@ -152,11 +152,11 @@ foreach($statuses as $status => $id): ?>
 </div>
 
 <!-- Order Logs Modal -->
-<div id="modal-order-logs" class="shipping-modal">
+<div id="modal-order-logs" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 600px;">
         <div class="shipping-modal-header">
-            <h4>سجل تتبع الطلب: <span id="log-order-num"></span></h4>
-            <button onclick="document.getElementById('modal-order-logs').style.display='none'">&times;</button>
+            <h3>سجل تتبع الطلب: <span id="log-order-num"></span></h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-order-logs')">&times;</button>
         </div>
         <div class="shipping-modal-body">
             <div id="order-logs-timeline" class="shipping-timeline">
@@ -167,219 +167,10 @@ foreach($statuses as $status => $id): ?>
 </div>
 
 <script>
-let currentStatus = '<?php echo $sub; ?>';
-if (currentStatus === 'new-orders') currentStatus = 'new';
-
-function loadOrders(status = currentStatus) {
-    currentStatus = status;
-    const search = document.getElementById('order-search').value;
-    const tbody = document.getElementById('table-body-' + status);
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px;"><span class="dashicons dashicons-update spin"></span> جاري التحميل...</td></tr>';
-
-    fetch(ajaxurl + `?action=shipping_get_orders&status=${status}&search=${encodeURIComponent(search)}`)
-    .then(r => r.json()).then(res => {
-        if (!res.data.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">لا توجد طلبات متوفرة</td></tr>';
-            return;
-        }
-        tbody.innerHTML = res.data.map(o => `
-            <tr>
-                <td><input type="checkbox" class="order-checkbox" value="${o.id}" onchange="updateBulkBar()"></td>
-                <td><strong>${o.order_number}</strong></td>
-                <td>
-                    <div style="font-weight:700;">${o.customer_name}</div>
-                    <div style="font-size:11px; color:#718096;">${o.customer_phone}</div>
-                </td>
-                <td>${parseFloat(o.total_amount).toFixed(2)} <?php echo esc_js($currency); ?></td>
-                <td style="font-size:12px; max-width:200px;">
-                    <div class="truncate" title="${o.pickup_address}">من: ${o.pickup_address}</div>
-                    <div class="truncate" title="${o.delivery_address}">إلى: ${o.delivery_address}</div>
-                </td>
-                <td>${o.created_at.split(' ')[0]}</td>
-                <td>
-                    <div style="display:flex; gap:5px;">
-                        <button class="shipping-btn" style="padding:4px 8px; font-size:11px;" onclick="viewOrderLogs(${o.id}, '${o.order_number}')">سجل</button>
-                        <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#4a5568;" onclick='openEditOrderModal(${JSON.stringify(o).replace(/"/g, '&quot;')})'>تعديل</button>
-                        ${o.shipment_id ? `<button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#319795;" onclick="viewShipmentDossier(${o.shipment_id})">ملف</button>` : ''}
-                        ${o.status === 'new' ? `<button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#3182ce;" onclick="prepareShipment(${o.id})">شحن</button>` : ''}
-                        ${o.status !== 'completed' && o.status !== 'cancelled' ? `
-                            <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#38a169;" onclick="updateOrderStatus(${o.id}, '${getNextStatus(o.status)}')">تحديث</button>
-                        ` : ''}
-                        <button class="shipping-btn" style="padding:4px 8px; font-size:11px; background:#e53e3e;" onclick="deleteOrder(${o.id})">حذف</button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-    });
-}
-
-function getNextStatus(current) {
-    if (current === 'new') return 'in-progress';
-    if (current === 'in-progress') return 'completed';
-    return current;
-}
-
-function updateOrderStatus(id, status) {
-    if (!confirm(`هل أنت متأكد من تغيير حالة الطلب إلى ${status}؟`)) return;
-    const fd = new FormData();
-    fd.append('action', 'shipping_update_order');
-    fd.append('id', id);
-    fd.append('status', status);
-    fd.append('nonce', '<?php echo wp_create_nonce("shipping_order_action"); ?>');
-
-    fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
-        if (res.success) {
-            shippingShowNotification('تم تحديث حالة الطلب');
-            loadOrders(currentStatus);
-        } else alert(res.data);
-    });
-}
-
-function deleteOrder(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا الطلب نهائياً؟')) return;
-    const fd = new FormData();
-    fd.append('action', 'shipping_delete_order');
-    fd.append('id', id);
-    fd.append('nonce', '<?php echo wp_create_nonce("shipping_order_action"); ?>');
-
-    fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
-        if (res.success) {
-            shippingShowNotification('تم حذف الطلب');
-            loadOrders(currentStatus);
-        } else alert(res.data);
-    });
-}
-
-function viewOrderLogs(id, num) {
-    document.getElementById('log-order-num').innerText = num;
-    const container = document.getElementById('order-logs-timeline');
-    container.innerHTML = '<p style="text-align:center;">جاري تحميل السجل...</p>';
-    document.getElementById('modal-order-logs').style.display = 'flex';
-
-    fetch(ajaxurl + '?action=shipping_get_order_logs&id=' + id)
-    .then(r => r.json()).then(res => {
-        if (!res.data.length) { container.innerHTML = '<p>لا توجد سجلات لهذا الطلب</p>'; return; }
-        container.innerHTML = res.data.map(l => `
-            <div class="timeline-item" style="border-right: 2px solid #edf2f7; padding-right: 20px; position: relative; padding-bottom: 15px; margin-right: 10px;">
-                <div style="position: absolute; right: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--shipping-primary-color); border: 2px solid #fff;"></div>
-                <div style="font-weight: 700; font-size: 13px;">${l.action}</div>
-                <div style="font-size: 11px; color: #718096;">بواسطة: ${l.display_name} | ${l.created_at}</div>
-                ${l.new_value ? `<div style="font-size: 12px; margin-top: 5px; background: #f8fafc; padding: 5px; border-radius: 5px;">${l.new_value}</div>` : ''}
-            </div>
-        `).join('');
-    });
-}
-
-function prepareShipment(orderId) {
-    // Logic to redirect to shipment creation with order data
-    window.location.href = `<?php echo admin_url('admin.php?page=shipping-admin&shipping_tab=shipment-mgmt&sub=create-shipment&order_id='); ?>` + orderId;
-}
-
-function viewShipmentDossier(shipmentId) {
-    window.location.href = `<?php echo admin_url('admin.php?page=shipping-admin&shipping_tab=shipment-mgmt&sub=monitoring&view_dossier='); ?>` + shipmentId;
-}
-
-// Bulk Actions Logic
-function toggleAllOrders(master) {
-    document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = master.checked);
-    updateBulkBar();
-}
-
-function updateBulkBar() {
-    const checked = document.querySelectorAll('.order-checkbox:checked');
-    const bar = document.getElementById('order-bulk-bar');
-    if (checked.length > 0) {
-        bar.style.display = 'flex';
-        document.getElementById('bulk-count').innerText = checked.length;
-    } else {
-        bar.style.display = 'none';
-    }
-}
-
-function clearBulkSelection() {
-    document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = false);
-    updateBulkBar();
-}
-
-function applyBulkStatus() {
-    const status = document.getElementById('bulk-status').value;
-    if (!status) return alert('يرجى اختيار الحالة الجديدة');
-    const ids = Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
-
-    if (!confirm(`هل أنت متأكد من تغيير حالة ${ids.length} طلبات إلى ${status}؟`)) return;
-
-    const fd = new FormData();
-    fd.append('action', 'shipping_bulk_update_orders');
-    fd.append('ids', ids.join(','));
-    fd.append('status', status);
-    fd.append('nonce', '<?php echo wp_create_nonce("shipping_order_action"); ?>');
-
-    fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
-        if (res.success) {
-            shippingShowNotification(`تم تحديث ${res.data} طلبات بنجاح`);
-            clearBulkSelection();
-            loadOrders(currentStatus);
-        } else alert(res.data);
-    });
-}
-
-// Search Debouncing
-let searchTimeout;
-function debounceOrderSearch() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => loadOrders(currentStatus), 500);
-}
-
-function openEditOrderModal(o) {
-    const f = document.getElementById('form-edit-order');
-    f.id.value = o.id;
-    f.customer_id.value = o.customer_id;
-    f.total_amount.value = o.total_amount;
-    f.pickup_address.value = o.pickup_address;
-    f.delivery_address.value = o.delivery_address;
-    f.order_details.value = o.order_details;
-    document.getElementById('modal-edit-order').style.display = 'flex';
-}
-
-document.getElementById('form-edit-order')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const btn = this.querySelector('button');
-    btn.disabled = true; btn.innerText = 'جاري الحفظ...';
-    const fd = new FormData(this);
-    fd.append('action', 'shipping_update_order');
-    fd.append('nonce', '<?php echo wp_create_nonce("shipping_order_action"); ?>');
-
-    fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
-        btn.disabled = false; btn.innerText = 'حفظ التعديلات';
-        if (res.success) {
-            shippingShowNotification('تم تحديث الطلب بنجاح');
-            document.getElementById('modal-edit-order').style.display = 'none';
-            loadOrders(currentStatus);
-        } else alert(res.data);
-    });
+window.addEventListener('DOMContentLoaded', () => {
+    OrdersController.currentStatus = '<?php echo ($sub == 'new-orders' ? 'new' : $sub); ?>';
+    OrdersController.loadOrders();
 });
-
-// Form Submission
-document.getElementById('form-add-order')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const btn = this.querySelector('button');
-    btn.disabled = true; btn.innerText = 'جاري الحفظ...';
-
-    fetch(ajaxurl, { method: 'POST', body: new FormData(this) })
-    .then(r => r.json()).then(res => {
-        if (res.success) {
-            shippingShowNotification('تم إنشاء الطلب بنجاح');
-            document.getElementById('modal-add-order').style.display = 'none';
-            this.reset();
-            loadOrders('new');
-        } else {
-            alert(res.data);
-            btn.disabled = false; btn.innerText = 'إنشاء الطلب';
-        }
-    });
-});
-
-window.addEventListener('DOMContentLoaded', () => loadOrders(currentStatus));
 </script>
 
 <style>

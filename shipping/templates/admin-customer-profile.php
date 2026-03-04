@@ -112,7 +112,7 @@ $statuses = Shipping_Settings::get_account_statuses();
     <!-- Edit Customer Modal -->
     <div id="edit-customer-modal" class="shipping-modal-overlay">
         <div class="shipping-modal-content" style="max-width: 900px;">
-            <div class="shipping-modal-header"><h3>تعديل بيانات العميل</h3><button class="shipping-modal-close" onclick="document.getElementById('edit-customer-modal').style.display='none'">&times;</button></div>
+            <div class="shipping-modal-header"><h3>تعديل بيانات العميل</h3><button class="shipping-modal-close" onclick="ShippingModal.close('edit-customer-modal')">&times;</button></div>
             <form id="edit-customer-form" style="padding: 20px;">
                 <?php wp_nonce_field('shipping_add_customer', 'shipping_nonce'); ?>
                 <input type="hidden" name="customer_id" id="edit_customer_id_hidden">
@@ -137,11 +137,9 @@ $statuses = Shipping_Settings::get_account_statuses();
 </div>
 
 <script>
-function shippingTriggerPhotoUpload() {
-    document.getElementById('customer-photo-input').click();
-}
+window.shippingTriggerPhotoUpload = () => document.getElementById('customer-photo-input').click();
 
-function shippingUploadCustomerPhoto(customerId) {
+window.shippingUploadCustomerPhoto = function(customerId) {
     const file = document.getElementById('customer-photo-input').files[0];
     if (!file) return;
 
@@ -151,7 +149,7 @@ function shippingUploadCustomerPhoto(customerId) {
     formData.append('customer_photo', file);
     formData.append('shipping_photo_nonce', '<?php echo wp_create_nonce("shipping_photo_action"); ?>');
 
-    fetch('<?php echo admin_url('admin-ajax.php'); ?>', { method: 'POST', body: formData })
+    fetch(ajaxurl, { method: 'POST', body: formData })
     .then(r => r.json())
     .then(res => {
         if (res.success) {
@@ -161,51 +159,48 @@ function shippingUploadCustomerPhoto(customerId) {
             alert('فشل الرفع: ' + res.data);
         }
     });
-}
+};
 
-function deleteCustomer(id, name) {
-    if (!confirm('هل أنت متأكد من حذف العميل: ' + name + ' نهائياً من النظام؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+window.deleteCustomer = function(id, name) {
+    if (!confirm('هل أنت متأكد من حذف العميل؟')) return;
     const formData = new FormData();
     formData.append('action', 'shipping_delete_customer_ajax');
     formData.append('customer_id', id);
     formData.append('nonce', '<?php echo wp_create_nonce("shipping_delete_customer"); ?>');
 
-    fetch('<?php echo admin_url('admin-ajax.php'); ?>', { method: 'POST', body: formData })
+    fetch(ajaxurl, { method: 'POST', body: formData })
     .then(r => r.json())
     .then(res => {
         if (res.success) {
             window.location.href = '<?php echo add_query_arg('shipping_tab', 'users-management'); ?>';
-        } else {
-            alert('خطأ: ' + res.data);
-        }
+        } else alert('خطأ: ' + res.data);
     });
-}
-
-window.shippingEditCustomer = function(s) {
-    document.getElementById('edit_customer_id_hidden').value = s.id;
-    document.getElementById('edit_first_name').value = s.first_name;
-    document.getElementById('edit_last_name').value = s.last_name;
-    document.getElementById('edit_username').value = s.username;
-    document.getElementById('edit_res_city').value = s.residence_city || '';
-    document.getElementById('edit_res_street').value = s.residence_street || '';
-    document.getElementById('edit_phone').value = s.phone;
-    document.getElementById('edit_email').value = s.email;
-    document.getElementById('edit_notes').value = s.notes || '';
-    document.getElementById('edit-customer-modal').style.display = 'flex';
 };
 
-document.getElementById('edit-customer-form').onsubmit = function(e) {
+window.shippingEditCustomer = function(s) {
+    const f = document.getElementById('edit-customer-form');
+    f.customer_id.value = s.id;
+    f.first_name.value = s.first_name;
+    f.last_name.value = s.last_name;
+    f.username.value = s.username;
+    f.residence_city.value = s.residence_city || '';
+    f.residence_street.value = s.residence_street || '';
+    f.phone.value = s.phone;
+    f.email.value = s.email;
+    f.notes.value = s.notes || '';
+    ShippingModal.open('edit-customer-modal');
+};
+
+document.getElementById('edit-customer-form')?.addEventListener('submit', function(e) {
     e.preventDefault();
-    const formData = new FormData(this);
-    formData.append('action', 'shipping_update_customer_ajax');
-    fetch('<?php echo admin_url('admin-ajax.php'); ?>', { method: 'POST', body: formData })
+    const fd = new FormData(this);
+    fd.append('action', 'shipping_update_customer_ajax');
+    fetch(ajaxurl, { method: 'POST', body: fd })
     .then(r => r.json()).then(res => {
         if(res.success) {
             shippingShowNotification('تم تحديث البيانات بنجاح');
             setTimeout(() => location.reload(), 500);
-        } else {
-            alert(res.data);
-        }
+        } else alert(res.data);
     });
-};
+});
 </script>

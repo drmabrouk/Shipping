@@ -55,7 +55,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                     <label>استيراد بيانات من رقم شحنة:</label>
                     <input type="text" id="import-shipment-number" class="shipping-input" placeholder="SHP-XXXXXX">
                 </div>
-                <button type="button" class="shipping-btn" style="width: auto; height: 45px;" onclick="importShipmentToInvoice()">استيراد البيانات</button>
+                <button type="button" class="shipping-btn" style="width: auto; height: 45px;" onclick="BillingController.importShipment()">استيراد البيانات</button>
             </div>
 
             <form id="shipping-invoice-form">
@@ -80,7 +80,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                     </h5>
                     <!-- Items injected here -->
                 </div>
-                <button type="button" class="shipping-btn shipping-btn-outline" onclick="addInvoiceRow()" style="width:auto; margin-bottom:20px;">+ إضافة بند يدوي</button>
+                <button type="button" class="shipping-btn shipping-btn-outline" onclick="BillingController.addInvoiceRow()" style="width:auto; margin-bottom:20px;">+ إضافة بند يدوي</button>
 
                 <div style="background:#f8fafc; padding:20px; border-radius:12px; margin-top:20px; border: 1px solid #e2e8f0;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>المجموع الفرعي:</span><strong id="invoice-subtotal">0.00</strong></div>
@@ -161,7 +161,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
                             <td><?php echo number_format($inv->total_amount, 2); ?> <?php echo esc_html($currency); ?></td>
                             <td style="color:<?php echo (strtotime($inv->due_date) < time()) ? '#e53e3e' : 'inherit'; ?>"><?php echo $inv->due_date; ?></td>
                             <td><span class="shipping-badge shipping-badge-low"><?php echo $inv->status; ?></span></td>
-                            <td><button class="shipping-btn shipping-btn-outline" style="padding:5px 10px;" onclick="openPaymentModal(<?php echo htmlspecialchars(json_encode($inv)); ?>)">تسجيل دفع</button></td>
+                            <td><button class="shipping-btn shipping-btn-outline" style="padding:5px 10px;" onclick="BillingController.openPaymentModal(<?php echo htmlspecialchars(json_encode($inv)); ?>)">تسجيل دفع</button></td>
                         </tr>
                     <?php endforeach; endif; ?>
                 </tbody>
@@ -217,7 +217,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
     <div class="shipping-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h4>قواعد تسعير الشحن النشطة</h4>
-            <button class="shipping-btn" style="width:auto;" onclick="document.getElementById('modal-add-rule-direct').style.display='flex'">+ إضافة قاعدة جديدة</button>
+            <button class="shipping-btn" style="width:auto;" onclick="ShippingModal.open('modal-add-rule-direct')">+ إضافة قاعدة جديدة</button>
         </div>
         <div class="shipping-table-container">
             <table class="shipping-table">
@@ -239,11 +239,11 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
 </div>
 
 <!-- Add Rule Modal -->
-<div id="modal-add-rule-direct" class="shipping-modal">
+<div id="modal-add-rule-direct" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 500px;">
         <div class="shipping-modal-header">
-            <h4>إضافة قاعدة تسعير</h4>
-            <button onclick="document.getElementById('modal-add-rule-direct').style.display='none'">&times;</button>
+            <h3>إضافة قاعدة تسعير</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-add-rule-direct')">&times;</button>
         </div>
         <form id="form-rule-direct">
             <input type="hidden" name="action" value="shipping_add_pricing">
@@ -265,7 +265,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
     <div class="shipping-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h4>الرسوم والخدمات الإضافية</h4>
-            <button class="shipping-btn" style="width:auto; background:#38a169;" onclick="document.getElementById('modal-add-fee-direct').style.display='flex'">+ إضافة رسم جديد</button>
+            <button class="shipping-btn" style="width:auto; background:#38a169;" onclick="ShippingModal.open('modal-add-fee-direct')">+ إضافة رسم جديد</button>
         </div>
         <div class="shipping-table-container">
             <table class="shipping-table">
@@ -287,11 +287,11 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
 </div>
 
 <!-- Add Fee Modal -->
-<div id="modal-add-fee-direct" class="shipping-modal">
+<div id="modal-add-fee-direct" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 450px;">
         <div class="shipping-modal-header">
-            <h4>إضافة رسم إضافي</h4>
-            <button onclick="document.getElementById('modal-add-fee-direct').style.display='none'">&times;</button>
+            <h3>إضافة رسم إضافي</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-add-fee-direct')">&times;</button>
         </div>
         <form id="form-fee-direct">
             <input type="hidden" name="action" value="shipping_add_additional_fee">
@@ -337,7 +337,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
 
 <div id="payment-modal" class="shipping-modal-overlay">
     <div class="shipping-modal-content">
-        <div class="shipping-modal-header"><h3>تسجيل عملية دفع</h3><button class="shipping-modal-close" onclick="document.getElementById('payment-modal').style.display='none'">&times;</button></div>
+        <div class="shipping-modal-header"><h3>تسجيل عملية دفع</h3><button class="shipping-modal-close" onclick="ShippingModal.close('payment-modal')">&times;</button></div>
         <form id="shipping-payment-form" style="padding:20px;">
             <input type="hidden" name="invoice_id" id="pay-inv-id">
             <div class="shipping-form-group"><label>المبلغ المدفوع:</label><input type="number" step="0.01" name="amount_paid" id="pay-amount" class="shipping-input" required></div>
@@ -355,275 +355,7 @@ $sub = $_GET['sub'] ?? 'invoice-gen';
 </div>
 
 <script>
-function addInvoiceRow(desc = '', qty = 1, price = 0) {
-    const container = document.getElementById('invoice-items-container');
-    const div = document.createElement('div');
-    div.className = 'invoice-item-row';
-    div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px; margin-bottom:10px;';
-    div.innerHTML = `
-        <input type="text" placeholder="الوصف" class="shipping-input item-desc" value="${desc}">
-        <input type="number" placeholder="الكمية" class="shipping-input item-qty" value="${qty}">
-        <input type="number" placeholder="السعر" class="shipping-input item-price" value="${price}">
-        <button type="button" class="shipping-btn" style="background:#e53e3e;" onclick="this.parentElement.remove(); calculateInvoice();">حذف</button>
-    `;
-    container.appendChild(div);
-    attachInvoiceListeners();
-    calculateInvoice();
-}
-
-function attachInvoiceListeners() {
-    document.querySelectorAll('.item-qty, .item-price, .item-desc').forEach(input => {
-        input.oninput = () => { calculateInvoice(); updatePreview(); };
-    });
-}
-
-function calculateInvoice() {
-    let subtotal = 0;
-    document.querySelectorAll('.invoice-item-row').forEach(row => {
-        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-        const price = parseFloat(row.querySelector('.item-price').value) || 0;
-        subtotal += qty * price;
-    });
-    const tax = subtotal * 0.15; // 15% VAT
-    const total = subtotal + tax;
-    document.getElementById('invoice-subtotal').innerText = subtotal.toFixed(2);
-    document.getElementById('invoice-tax').innerText = tax.toFixed(2);
-    document.getElementById('invoice-total').innerText = total.toFixed(2);
-    updatePreview();
-}
-
-function updatePreview() {
-    const tbody = document.getElementById('preview-items-body');
-    let html = '';
-    let rowsFound = false;
-    document.querySelectorAll('.invoice-item-row').forEach(row => {
-        const desc = row.querySelector('.item-desc').value;
-        const qty = row.querySelector('.item-qty').value;
-        const price = parseFloat(row.querySelector('.item-price').value) || 0;
-        if (desc) {
-            rowsFound = true;
-            html += `<tr><td style="padding:10px; border-bottom:1px solid #f7fafc;">${desc}</td><td style="text-align:center;">${qty}</td><td style="text-align:left;">${(qty * price).toFixed(2)}</td></tr>`;
-        }
-    });
-    tbody.innerHTML = rowsFound ? html : '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #a0aec0;">أضف بنوداً لعرض المعاينة</td></tr>';
-    document.getElementById('preview-total').innerText = document.getElementById('invoice-total').innerText + ' ' + '<?php echo esc_js($currency); ?>';
-}
-
-function importShipmentToInvoice() {
-    const num = document.getElementById('import-shipment-number').value;
-    if(!num) return alert('يرجى إدخال رقم الشحنة');
-
-    fetch(ajaxurl + '?action=shipping_get_shipment_tracking&number=' + num + '&nonce=<?php echo wp_create_nonce("shipping_shipment_action"); ?>')
-    .then(r => r.json()).then(res => {
-        if(res.success) {
-            const s = res.data;
-            document.getElementById('invoice-customer-id').value = s.customer_id;
-            document.getElementById('invoice-items-container').innerHTML = '';
-            document.getElementById('invoice-shipment-ref').innerText = '(شحنة: ' + s.shipment_number + ')';
-
-            // Re-calculate cost to get breakdown
-            const fd = new FormData();
-            fd.append('action', 'shipping_estimate_cost');
-            fd.append('customer_id', s.customer_id);
-            fd.append('classification', s.classification);
-            fd.append('weight', s.weight);
-            fd.append('distance', 100); // Default if distance unknown
-            fd.append('is_urgent', s.classification === 'express' ? 1 : 0);
-
-            fetch(ajaxurl, { method:'POST', body: fd }).then(r=>r.json()).then(calcRes => {
-                if(calcRes.success) {
-                    const b = calcRes.data.breakdown;
-                    addInvoiceRow('تكلفة الشحن الأساسية (' + s.shipment_number + ')', 1, b.base);
-                    addInvoiceRow('تكلفة الوزن (' + s.weight + ' كجم)', 1, b.weight);
-                    addInvoiceRow('تكلفة المسافة والوجهة', 1, b.distance);
-                    if(b.fees > 0) addInvoiceRow('رسوم إضافية وخدمات خاصة', 1, b.fees);
-                    if(b.discount > 0) addInvoiceRow('خصومات وعروض ترويجية', 1, -b.discount);
-                }
-            });
-        } else alert('لم يتم العثور على الشحنة');
-    });
-}
-
-document.getElementById('shipping-invoice-form')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const items = [];
-    document.querySelectorAll('.invoice-item-row').forEach(row => {
-        items.push({
-            desc: row.querySelector('.item-desc').value,
-            qty: row.querySelector('.item-qty').value,
-            price: row.querySelector('.item-price').value
-        });
-    });
-
-    const fd = new FormData(this);
-    fd.append('action', 'shipping_save_invoice');
-    fd.append('nonce', '<?php echo wp_create_nonce("shipping_billing_action"); ?>');
-    fd.append('subtotal', document.getElementById('invoice-subtotal').innerText);
-    fd.append('total_amount', document.getElementById('invoice-total').innerText);
-    fd.append('tax_amount', document.getElementById('invoice-tax').innerText);
-    fd.append('items_json', JSON.stringify(items));
-
-    fetch(ajaxurl, {method:'POST', body:fd}).then(r=>r.json()).then(res => {
-        if(res.success) {
-            shippingShowNotification('تم إصدار الفاتورة بنجاح');
-            location.reload();
-        } else alert(res.data);
-    });
+window.addEventListener('DOMContentLoaded', () => {
+    BillingController.init();
 });
-
-function openPaymentModal(inv) {
-    document.getElementById('pay-inv-id').value = inv.id;
-    document.getElementById('pay-amount').value = inv.total_amount;
-    document.getElementById('payment-modal').style.display = 'flex';
-}
-
-document.getElementById('shipping-payment-form')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const fd = new FormData(this);
-    fd.append('action', 'shipping_process_payment');
-    fd.append('nonce', '<?php echo wp_create_nonce("shipping_billing_action"); ?>');
-    fetch(ajaxurl, {method:'POST', body:fd}).then(r=>r.json()).then(res=>{
-        if(res.success) {
-            shippingShowNotification('تم تسجيل الدفع بنجاح');
-            location.reload();
-        } else alert(res.data);
-    });
-});
-
-window.onload = function() {
-    addInvoiceRow();
-    loadRulesDirect();
-    loadFeesDirect();
-
-    document.getElementById('shipping-calculator-form-direct')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const fd = new FormData(this);
-        fd.append('action', 'shipping_estimate_cost');
-        fetch(ajaxurl, { method: 'POST', body: fd }).then(r => r.json()).then(res => {
-            if (res.success) {
-                const data = res.data;
-                document.getElementById('calc-results-direct').style.display = 'block';
-                document.getElementById('estimated-total-direct').innerText = data.total_cost.toFixed(2);
-                let html = '<ul style="list-style:none; padding:0; margin:0; font-size:13px;">';
-                html += `<li style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>أساسي:</span> <strong>${data.breakdown.base.toFixed(2)}</strong></li>`;
-                html += `<li style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>وزن:</span> <strong>${data.breakdown.weight.toFixed(2)}</strong></li>`;
-                html += `<li style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>مسافة:</span> <strong>${data.breakdown.distance.toFixed(2)}</strong></li>`;
-                html += '</ul>';
-                document.getElementById('cost-breakdown-direct').innerHTML = html;
-            }
-        });
-    });
-
-    document.getElementById('form-rule-direct')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        fetch(ajaxurl, { method: 'POST', body: new FormData(this) }).then(r => r.json()).then(res => {
-            if (res.success) {
-                document.getElementById('modal-add-rule-direct').style.display = 'none';
-                this.reset();
-                loadRulesDirect();
-            }
-        });
-    });
-
-    document.getElementById('form-fee-direct')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        fetch(ajaxurl, { method: 'POST', body: new FormData(this) }).then(r => r.json()).then(res => {
-            if (res.success) {
-                document.getElementById('modal-add-fee-direct').style.display = 'none';
-                this.reset();
-                loadFeesDirect();
-            }
-        });
-    });
-
-    function loadRulesDirect() {
-        fetch(ajaxurl + '?action=shipping_get_pricing_rules').then(r => r.json()).then(res => {
-            const body = document.getElementById('rules-table-direct');
-            if(!body) return;
-            if (!res.data.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد قواعد</td></tr>'; return; }
-            body.innerHTML = res.data.map(r => `
-                <tr>
-                    <td><strong>${r.name}</strong></td>
-                    <td>${parseFloat(r.base_cost).toFixed(2)} <?php echo esc_js($currency); ?></td>
-                    <td>${parseFloat(r.cost_per_kg).toFixed(2)} / كجم</td>
-                    <td>${parseFloat(r.min_cost).toFixed(2)} <?php echo esc_js($currency); ?></td>
-                    <td><button class="shipping-btn" style="background:#e53e3e; padding:4px 8px; font-size:11px;" onclick="deleteRuleDirect(${r.id})">حذف</button></td>
-                </tr>
-            `).join('');
-        });
-    }
-
-    window.deleteRuleDirect = function(id) {
-        if(!confirm('حذف القاعدة؟')) return;
-        const fd = new FormData();
-        fd.append('action', 'shipping_delete_pricing_rule');
-        fd.append('id', id);
-        fd.append('nonce', '<?php echo wp_create_nonce("shipping_pricing_action"); ?>');
-        fetch(ajaxurl, { method: 'POST', body: fd }).then(() => loadRulesDirect());
-    };
-
-    function loadFeesDirect() {
-        fetch(ajaxurl + '?action=shipping_get_additional_fees').then(r => r.json()).then(res => {
-            const body = document.getElementById('fees-table-direct');
-            if(!body) return;
-            if (!res.data.length) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد رسوم</td></tr>'; return; }
-            body.innerHTML = res.data.map(f => `
-                <tr>
-                    <td>${f.fee_name}</td>
-                    <td>${parseFloat(f.fee_value).toFixed(2)}${f.fee_type === 'percentage' ? '%' : ' ' + '<?php echo esc_js($currency); ?>'}</td>
-                    <td>${f.fee_type === 'percentage' ? 'نسبة' : 'ثابت'}</td>
-                    <td>${f.is_automatic == 1 ? 'نعم' : 'لا'}</td>
-                    <td><button class="shipping-btn" style="background:#e53e3e; padding:4px 8px; font-size:11px;" onclick="deleteFeeDirect(${f.id})">حذف</button></td>
-                </tr>
-            `).join('');
-        });
-    }
-
-    window.deleteFeeDirect = function(id) {
-        if(!confirm('حذف الرسم؟')) return;
-        const fd = new FormData();
-        fd.append('action', 'shipping_delete_additional_fee');
-        fd.append('id', id);
-        fd.append('nonce', '<?php echo wp_create_nonce("shipping_pricing_action"); ?>');
-        fetch(ajaxurl, { method: 'POST', body: fd }).then(() => loadFeesDirect());
-    };
-
-    const ctx = document.getElementById('revenueChart')?.getContext('2d');
-    if(ctx) {
-        fetch(ajaxurl + '?action=shipping_get_billing_report')
-        .then(r => r.json())
-        .then(res => {
-            if(res.success) {
-                const stats = res.data;
-                const labels = stats.monthly.map(s => s.month);
-                const data = stats.monthly.map(s => s.total);
-
-                document.getElementById('today-revenue').innerText = stats.summary.today.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
-                document.getElementById('month-revenue').innerText = stats.summary.month.toFixed(2) + ' ' + '<?php echo esc_js($currency); ?>';
-
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels.length ? labels : ['No Data'],
-                        datasets: [{
-                            label: 'الإيرادات الشهرية',
-                            data: data.length ? data : [0],
-                            borderColor: '#F63049',
-                            backgroundColor: 'rgba(246, 48, 73, 0.1)',
-                            fill: true,
-                            tension: 0.3
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
-                    }
-                });
-            }
-        });
-    }
-};
 </script>

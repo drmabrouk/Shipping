@@ -64,6 +64,30 @@ class Shipping_Public {
         wp_enqueue_script('leaflet-js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', array(), '1.9.4', true);
         wp_enqueue_style($this->plugin_name, SHIPPING_PLUGIN_URL . 'assets/css/shipping-public.css', array('dashicons'), $this->version, 'all');
 
+        // Modular JS Controllers
+        wp_enqueue_script('shipping-core', SHIPPING_PLUGIN_URL . 'assets/js/shipping-core.js', array('jquery'), $this->version, true);
+        wp_enqueue_script('shipping-orders', SHIPPING_PLUGIN_URL . 'assets/js/orders-controller.js', array('shipping-core'), $this->version, true);
+        wp_enqueue_script('shipping-customers', SHIPPING_PLUGIN_URL . 'assets/js/customers-controller.js', array('shipping-core'), $this->version, true);
+        wp_enqueue_script('shipping-shipments', SHIPPING_PLUGIN_URL . 'assets/js/shipments-controller.js', array('shipping-core'), $this->version, true);
+        wp_enqueue_script('shipping-logistics', SHIPPING_PLUGIN_URL . 'assets/js/logistics-controller.js', array('shipping-core', 'leaflet-js', 'chart-js'), $this->version, true);
+        wp_enqueue_script('shipping-billing', SHIPPING_PLUGIN_URL . 'assets/js/billing-controller.js', array('shipping-core', 'chart-js'), $this->version, true);
+        wp_enqueue_script('shipping-customs', SHIPPING_PLUGIN_URL . 'assets/js/customs-controller.js', array('shipping-core'), $this->version, true);
+        wp_enqueue_script('shipping-users', SHIPPING_PLUGIN_URL . 'assets/js/users-controller.js', array('shipping-core'), $this->version, true);
+        wp_enqueue_script('shipping-tickets', SHIPPING_PLUGIN_URL . 'assets/js/tickets-controller.js', array('shipping-core'), $this->version, true);
+        wp_enqueue_script('shipping-admin', SHIPPING_PLUGIN_URL . 'assets/js/admin-controller.js', array('shipping-core'), $this->version, true);
+        wp_enqueue_script('shipping-public-ctrl', SHIPPING_PLUGIN_URL . 'assets/js/public-controller.js', array('shipping-core'), $this->version, true);
+
+        $info = Shipping_Settings::get_shipping_info();
+        wp_localize_script('shipping-core', 'shippingVars', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'adminUrl' => admin_url('admin.php?page=shipping-admin'),
+            'currency' => $info['currency'] ?? 'SAR',
+            'nonce' => wp_create_nonce('shipping_admin_action')
+        ));
+
+        // Legacy global for inline scripts still being migrated
+        wp_add_inline_script('shipping-core', 'window.shippingCurrency = "' . ($info['currency'] ?? 'SAR') . '"; window.shippingAdminUrl = "' . admin_url('admin.php?page=shipping-admin') . '";', 'before');
+
         $appearance = Shipping_Settings::get_appearance();
         $custom_css = "
             :root {

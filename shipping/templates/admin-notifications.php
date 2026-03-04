@@ -38,9 +38,9 @@ $templates = [
 <div class="shipping-notifications-settings" dir="rtl">
 
     <div class="shipping-tabs-wrapper" style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-        <button class="shipping-tab-btn shipping-active" onclick="shippingOpenSubTab('email-templates', this)">قوالب البريد</button>
-        <button class="shipping-tab-btn" onclick="shippingOpenSubTab('email-design', this)">تصميم الرسائل</button>
-        <button class="shipping-tab-btn" onclick="shippingOpenSubTab('email-logs', this)">سجل الرسائل المرسلة</button>
+        <button class="shipping-tab-btn shipping-active" onclick="AdminController.openSubTab('email-templates', this)">قوالب البريد</button>
+        <button class="shipping-tab-btn" onclick="AdminController.openSubTab('email-design', this)">تصميم الرسائل</button>
+        <button class="shipping-tab-btn" onclick="AdminController.openSubTab('email-logs', this)">سجل الرسائل المرسلة</button>
     </div>
 
     <!-- SubTab: Templates -->
@@ -190,14 +190,7 @@ $templates = [
 </div>
 
 <script>
-function shippingOpenSubTab(tabId, btn) {
-    document.querySelectorAll('.shipping-sub-tab').forEach(t => t.style.display = 'none');
-    document.getElementById(tabId).style.display = 'block';
-    btn.parentElement.querySelectorAll('.shipping-tab-btn').forEach(b => b.classList.remove('shipping-active'));
-    btn.classList.add('shipping-active');
-}
-
-function shippingLoadTemplate(type) {
+window.shippingLoadTemplate = function(type) {
     const labels = <?php echo json_encode($templates); ?>;
     const formData = new FormData();
     formData.append('action', 'shipping_get_template_ajax');
@@ -219,5 +212,5 @@ function shippingLoadTemplate(type) {
             document.getElementById('edit_is_enabled').checked = (t.is_enabled == 1);
         }
     });
-}
+};
 </script>

@@ -10,8 +10,8 @@ $sub = $_GET['sub'] ?? 'profiles';
         <button class="shipping-tab-btn <?php echo $sub == 'classification' ? 'shipping-active' : ''; ?>" onclick="shippingOpenInternalTab('customer-class', this)">التصنيف</button>
     </div>
     <div style="display: flex; gap: 10px;">
-        <button class="shipping-btn" onclick="document.getElementById('add-customer-modal').style.display='flex'">+ عميل جديد</button>
-        <button class="shipping-btn" style="background: #805ad5;" onclick="document.getElementById('modal-add-contract').style.display='flex'">+ إضافة عقد</button>
+        <button class="shipping-btn" onclick="ShippingModal.open('add-customer-modal')">+ عميل جديد</button>
+        <button class="shipping-btn" style="background: #805ad5;" onclick="ShippingModal.open('modal-add-contract')">+ إضافة عقد</button>
     </div>
 </div>
 
@@ -37,7 +37,7 @@ $sub = $_GET['sub'] ?? 'profiles';
                             <td><?php echo esc_html($c->phone); ?></td>
                             <td><span class="shipping-badge"><?php echo esc_html($c->classification); ?></span></td>
                             <td>
-                                <a href="<?php echo add_query_arg(['shipping_tab' => 'customer-profile', 'customer_id' => $c->id]); ?>" class="shipping-btn shipping-btn-outline" style="padding: 5px 10px; font-size: 11px; text-decoration:none;">عرض الملف</a>
+                                <a href="<?php echo add_query_arg(['shipping_tab' => 'customer-profile', 'customer_id' => $c->id]); ?>" onclick="ShippingState.setCustomer(<?php echo $c->id; ?>)" class="shipping-btn shipping-btn-outline" style="padding: 5px 10px; font-size: 11px; text-decoration:none;">عرض الملف</a>
                             </td>
                         </tr>
                     <?php endforeach; endif; ?>
@@ -136,7 +136,7 @@ $sub = $_GET['sub'] ?? 'profiles';
 <!-- Modals -->
 <div id="add-customer-modal" class="shipping-modal-overlay">
     <div class="shipping-modal-content">
-        <div class="shipping-modal-header"><h3>إضافة عميل جديد</h3><button class="shipping-modal-close" onclick="document.getElementById('add-customer-modal').style.display='none'">&times;</button></div>
+        <div class="shipping-modal-header"><h3>إضافة عميل جديد</h3><button class="shipping-modal-close" onclick="ShippingModal.close('add-customer-modal')">&times;</button></div>
         <form id="shipping-add-customer-form" style="padding:20px;">
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                 <div class="shipping-form-group"><label>الاسم الأول:</label><input type="text" name="first_name" class="shipping-input" required></div>
@@ -159,11 +159,11 @@ $sub = $_GET['sub'] ?? 'profiles';
     </div>
 </div>
 
-<div id="modal-add-contract" class="shipping-modal">
+<div id="modal-add-contract" class="shipping-modal-overlay">
     <div class="shipping-modal-content" style="max-width: 550px;">
         <div class="shipping-modal-header">
-            <h4>إضافة عقد جديد</h4>
-            <button onclick="document.getElementById('modal-add-contract').style.display='none'">&times;</button>
+            <h3>إضافة عقد جديد</h3>
+            <button class="shipping-modal-close" onclick="ShippingModal.close('modal-add-contract')">&times;</button>
         </div>
         <form id="form-add-contract">
             <input type="hidden" name="action" value="shipping_add_contract">
@@ -207,51 +207,7 @@ $sub = $_GET['sub'] ?? 'profiles';
 </div>
 
 <script>
-function loadContracts() {
-    fetch(ajaxurl + '?action=shipping_get_contracts')
-    .then(r => r.json()).then(res => {
-        const tbody = document.getElementById('contracts-table-body');
-        if (!res.data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">لا توجد عقود مسجلة</td></tr>'; return; }
-        tbody.innerHTML = res.data.map(c => `
-            <tr>
-                <td><strong>${c.contract_number}</strong></td>
-                <td>${c.customer_name}</td>
-                <td>${c.title}</td>
-                <td style="color: ${new Date(c.end_date) < new Date() ? '#e53e3e' : 'inherit'}">${c.end_date}</td>
-                <td><span class="shipping-badge">${c.status}</span></td>
-                <td><a href="${c.file_url}" target="_blank" class="shipping-btn-outline" style="padding:4px 8px; font-size:10px;">عرض العقد</a></td>
-            </tr>
-        `).join('');
-    });
-}
-
-document.getElementById('shipping-add-customer-form')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const fd = new FormData(this);
-    fd.append('action', 'shipping_add_customer_ajax');
-    fd.append('shipping_nonce', '<?php echo wp_create_nonce("shipping_add_customer"); ?>');
-
-    fetch(ajaxurl, {method:'POST', body:fd}).then(r=>r.json()).then(res=>{
-        if(res.success) {
-            shippingShowNotification('تمت إضافة العميل بنجاح');
-            location.reload();
-        } else alert(res.data);
-    });
-});
-
-document.getElementById('form-add-contract')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    fetch(ajaxurl, { method: 'POST', body: new FormData(this) })
-    .then(r => r.json()).then(res => {
-        if (res.success) {
-            shippingShowNotification('تم حفظ العقد بنجاح');
-            document.getElementById('modal-add-contract').style.display = 'none';
-            loadContracts();
-        } else alert(res.data);
-    });
-});
-
 window.addEventListener('DOMContentLoaded', () => {
-    if ("<?php echo $sub; ?>" === 'contracts') loadContracts();
+    if ("<?php echo $sub; ?>" === 'contracts') CustomersController.loadContracts();
 });
 </script>
