@@ -319,44 +319,42 @@
 }
 
 .shipping-sidebar-toggle {
-    position: absolute;
-    top: 15px;
-    left: -15px; /* Default for Sidebar on Right (RTL) */
-    width: 30px;
-    height: 30px;
-    background: var(--shipping-primary-color);
+    width: 100%;
+    padding: 15px 25px;
+    background: transparent;
     border: none;
-    border-radius: 50%;
-    color: white !important;
+    color: #4a5568 !important;
     cursor: pointer;
     display: flex;
     align-items: center;
-    justify-content: center;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     transition: all 0.3s ease;
-}
-
-[dir="ltr"] .shipping-sidebar-toggle {
-    left: auto;
-    right: -15px;
+    text-decoration: none;
 }
 
 .shipping-sidebar-toggle:hover {
-    background: var(--shipping-secondary-color);
-    transform: scale(1.1);
+    background: rgba(0,0,0,0.02);
+    color: var(--shipping-primary-color) !important;
 }
 
 .shipping-sidebar.collapsed .shipping-sidebar-toggle {
+    justify-content: center;
+    padding: 15px 0;
+}
+
+.shipping-sidebar.collapsed .shipping-sidebar-toggle .toggle-text {
+    display: none;
+}
+
+.shipping-sidebar.collapsed .shipping-sidebar-toggle .dashicons {
     transform: rotate(180deg);
 }
 
-[dir="ltr"] .shipping-sidebar.collapsed .shipping-sidebar-toggle {
+[dir="ltr"] .shipping-sidebar-toggle .dashicons {
+    transform: rotate(180deg);
+}
+
+[dir="ltr"] .shipping-sidebar.collapsed .shipping-sidebar-toggle .dashicons {
     transform: rotate(0deg);
-}
-
-[dir="ltr"] .shipping-sidebar-toggle {
-    transform: rotate(180deg);
 }
 
 .shipping-sidebar.collapsed .shipping-sidebar-link {
